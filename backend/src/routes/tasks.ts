@@ -16,6 +16,20 @@ const createTaskSchema = z.object({
     .max(500, 'Description cannot exceed 500 characters')
     .optional(),
   projectId: z.string().min(1, 'Project ID is required'),
+  priority: z
+    .enum(['low', 'medium', 'high', 'critical'], {
+      errorMap: () => ({ message: 'Priority must be low, medium, high, or critical' }),
+    })
+    .default('medium'),
+  status: z
+    .enum(['pending', 'in-progress', 'completed'], {
+      errorMap: () => ({ message: 'Status must be pending, in-progress, or completed' }),
+    })
+    .default('pending'),
+  estimatedHours: z
+    .number()
+    .min(0, 'Estimated hours cannot be negative')
+    .optional(),
 });
 
 const updateTaskSchema = createTaskSchema.partial().omit({ projectId: true });
@@ -115,6 +129,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             name: { type: 'string', minLength: 1, maxLength: 100},
             description: { type: 'string', maxLength: 500},
             projectId: { type: 'string'},
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical']},
+            status: { type: 'string', enum: ['pending', 'in-progress', 'completed']},
+            estimatedHours: { type: 'number', minimum: 0},
           },
         },
         response: {
@@ -144,7 +161,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const { name, description, projectId } = validationResult.data;
+        const { name, description, projectId, priority, status, estimatedHours } = validationResult.data;
 
         // Verify the project belongs to the user
         const project = await Project.findOne({
@@ -177,6 +194,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           name,
           description,
           projectId,
+          priority,
+          status,
+          estimatedHours,
           userId: request.user.id,
         });
 
@@ -276,6 +296,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           properties: {
             name: { type: 'string', minLength: 1, maxLength: 100},
             description: { type: 'string', maxLength: 500},
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical']},
+            status: { type: 'string', enum: ['pending', 'in-progress', 'completed']},
+            estimatedHours: { type: 'number', minimum: 0},
           },
         },
         response: {

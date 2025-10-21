@@ -2,10 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsService } from '@/services';
 import type { CreateProjectRequest, UpdateProjectRequest } from '@/types';
 
+const projectsQueryKey = {
+  all: ['projects'],
+  byId: (id: string) => [...projectsQueryKey.all, id],
+};
+
 // Projects hooks
 export const useProjects = () => {
   return useQuery({
-    queryKey: ['projects'],
+    queryKey: projectsQueryKey.all,
     queryFn: async () => {
       const response = await projectsService.getProjects();
       return response.projects;
@@ -15,7 +20,7 @@ export const useProjects = () => {
 
 export const useProject = (id: string) => {
   return useQuery({
-    queryKey: ['projects', id],
+    queryKey: projectsQueryKey.byId(id),
     queryFn: async () => {
       const response = await projectsService.getProject(id);
       return response.project;

@@ -7,10 +7,17 @@ import type {
   UpdateTimeEntryRequest 
 } from '@/types';
 
+const timeEntriesQueryKey = {
+  all: ['timeEntries'],
+  lists: () => [...timeEntriesQueryKey.all, 'list'],
+  list: (filters: TimeEntriesFilters) => [...timeEntriesQueryKey.lists(), filters],
+  activeTimer: () => [...timeEntriesQueryKey.all, 'activeTimer'],
+};
+
 // Time Entries hooks
 export const useTimeEntries = (filters?: TimeEntriesFilters) => {
   return useQuery({
-    queryKey: ['timeEntries', filters],
+    queryKey: timeEntriesQueryKey.list(filters ?? {}),
     queryFn: async () => {
       const response = await timeEntriesService.getTimeEntries(filters);
       return {
@@ -25,7 +32,7 @@ export const useTimeEntries = (filters?: TimeEntriesFilters) => {
 
 export const useActiveTimer = () => {
   return useQuery({
-    queryKey: ['activeTimer'],
+    queryKey: timeEntriesQueryKey.activeTimer(),
     queryFn: async () => {
       const response = await timeEntriesService.getActiveTimer();
       return response.timeEntry;

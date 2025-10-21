@@ -4,6 +4,9 @@ export interface Project {
   name: string;
   description?: string;
   color: string;
+  client?: string;
+  status: 'active' | 'archived';
+  budget?: number;
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -14,12 +17,18 @@ export interface CreateProjectRequest {
   name: string;
   description?: string;
   color?: string;
+  client?: string;
+  status?: 'active' | 'archived';
+  budget?: number;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   color?: string;
+  client?: string;
+  status?: 'active' | 'archived';
+  budget?: number;
 }
 
 // Project response types

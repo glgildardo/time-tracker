@@ -7,6 +7,9 @@ export interface Task {
   description?: string;
   projectId: string | Project;
   userId: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'in-progress' | 'completed';
+  estimatedHours?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -16,11 +19,17 @@ export interface CreateTaskRequest {
   name: string;
   description?: string;
   projectId: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  status?: 'pending' | 'in-progress' | 'completed';
+  estimatedHours?: number;
 }
 
 export interface UpdateTaskRequest {
   name?: string;
   description?: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  status?: 'pending' | 'in-progress' | 'completed';
+  estimatedHours?: number;
 }
 
 // Task response types

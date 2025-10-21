@@ -7,7 +7,9 @@ export interface TimeEntry {
   userId: string;
   startTime: string;
   endTime?: string;
+  duration?: number;
   description?: string;
+  status: 'in-progress' | 'completed';
   createdAt: string;
   updatedAt: string;
 }

@@ -5,6 +5,9 @@ export interface ITask extends Document {
   description?: string;
   projectId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'in-progress' | 'completed';
+  estimatedHours?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +34,26 @@ const TaskSchema = new Schema<ITask>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'User ID is required'],
+    },
+    priority: {
+      type: String,
+      enum: {
+        values: ['low', 'medium', 'high', 'critical'],
+        message: 'Priority must be low, medium, high, or critical',
+      },
+      default: 'medium',
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['pending', 'in-progress', 'completed'],
+        message: 'Status must be pending, in-progress, or completed',
+      },
+      default: 'pending',
+    },
+    estimatedHours: {
+      type: Number,
+      min: [0, 'Estimated hours cannot be negative'],
     },
   },
   {

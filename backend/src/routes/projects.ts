@@ -19,6 +19,19 @@ const createProjectSchema = z.object({
     .string()
     .regex(/^#[0-9A-F]{6}$/i, 'Color must be a valid hex code')
     .default('#3B82F6'),
+  client: z
+    .string()
+    .max(100, 'Client name cannot exceed 100 characters')
+    .optional(),
+  status: z
+    .enum(['active', 'archived'], {
+      errorMap: () => ({ message: 'Status must be active or archived' }),
+    })
+    .default('active'),
+  budget: z
+    .number()
+    .min(0, 'Budget cannot be negative')
+    .optional(),
 });
 
 const updateProjectSchema = createProjectSchema.partial();
@@ -83,6 +96,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             name: { type: 'string', minLength: 1, maxLength: 100},
             description: { type: 'string', maxLength: 500},
             color: { type: 'string', pattern: '^#[0-9A-F]{6}$'},
+            client: { type: 'string', maxLength: 100},
+            status: { type: 'string', enum: ['active', 'archived']},
+            budget: { type: 'number', minimum: 0},
           },
         },
         response: {
@@ -111,7 +127,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const { name, description, color } = validationResult.data;
+        const { name, description, color, client, status, budget } = validationResult.data;
 
         // Check if project with same name already exists for this user
         const existingProject = await Project.findOne({
@@ -130,6 +146,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           name,
           description,
           color,
+          client,
+          status,
+          budget,
           userId: request.user.id,
         });
 
@@ -229,6 +248,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             name: { type: 'string', minLength: 1, maxLength: 100},
             description: { type: 'string', maxLength: 500},
             color: { type: 'string', pattern: '^#[0-9A-F]{6}$'},
+            client: { type: 'string', maxLength: 100},
+            status: { type: 'string', enum: ['active', 'archived']},
+            budget: { type: 'number', minimum: 0},
           },
         },
         response: {

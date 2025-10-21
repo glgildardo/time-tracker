@@ -4,6 +4,9 @@ export interface IProject extends Document {
   name: string;
   description?: string;
   color: string;
+  client?: string;
+  status: 'active' | 'archived';
+  budget?: number;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +30,23 @@ const ProjectSchema = new Schema<IProject>(
       required: [true, 'Project color is required'],
       default: '#3B82F6',
       match: [/^#[0-9A-F]{6}$/i, 'Color must be a valid hex code'],
+    },
+    client: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Client name cannot exceed 100 characters'],
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['active', 'archived'],
+        message: 'Status must be either active or archived',
+      },
+      default: 'active',
+    },
+    budget: {
+      type: Number,
+      min: [0, 'Budget cannot be negative'],
     },
     userId: {
       type: Schema.Types.ObjectId,

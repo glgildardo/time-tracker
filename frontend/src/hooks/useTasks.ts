@@ -2,20 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksService } from '@/services';
 import type { CreateTaskRequest, UpdateTaskRequest } from '@/types';
 
+const tasksQueryKey = {
+  all: ['tasks'],
+  byId: (id: string) => [...tasksQueryKey.all, id],
+  byProjectId: (projectId: string) => [...tasksQueryKey.all, 'project', projectId],
+};
+
 // Tasks hooks
 export const useTasks = (projectId?: string) => {
   return useQuery({
-    queryKey: ['tasks', projectId],
+    queryKey: tasksQueryKey.byProjectId(projectId ?? ''),
     queryFn: async () => {
       const response = await tasksService.getTasks(projectId);
       return response.tasks;
     },
+    enabled: !!projectId,
   });
 };
 
 export const useTask = (id: string) => {
   return useQuery({
-    queryKey: ['tasks', id],
+    queryKey: tasksQueryKey.byId(id),
     queryFn: async () => {
       const response = await tasksService.getTask(id);
       return response.task;

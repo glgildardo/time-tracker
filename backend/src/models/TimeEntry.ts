@@ -7,6 +7,7 @@ export interface ITimeEntry extends Document {
   endTime?: Date;
   duration?: number; // in seconds
   description?: string;
+  status: 'in-progress' | 'completed';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,18 +46,29 @@ const TimeEntrySchema = new Schema<ITimeEntry>(
       trim: true,
       maxlength: [500, 'Description cannot exceed 500 characters'],
     },
+    status: {
+      type: String,
+      enum: {
+        values: ['in-progress', 'completed'],
+        message: 'Status must be in-progress or completed',
+      },
+      default: 'in-progress',
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Pre-save middleware to calculate duration
+// Pre-save middleware to calculate duration and status
 TimeEntrySchema.pre('save', function (next) {
   if (this.endTime && this.startTime) {
     this.duration = Math.floor(
       (this.endTime.getTime() - this.startTime.getTime()) / 1000
     );
+    this.status = 'completed';
+  } else {
+    this.status = 'in-progress';
   }
   next();
 });
