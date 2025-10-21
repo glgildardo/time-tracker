@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: time-tracker-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: time-tracker
+    volumes:
+      - mongodb_data_dev:/data/db
+    networks:
+      - time-tracker-dev-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.dev
+    container_name: time-tracker-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/time-tracker?authSource=admin
+      JWT_SECRET: lw5wgYkfMthIumH2/Q6zCk64xiNr9TSmj+DYC5yo4ravD7QibCEGHZ1rvCyyPMqI
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      FRONTEND_URL: http://localhost:5173
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    networks:
+      - time-tracker-dev-network
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    container_name: time-tracker-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - time-tracker-dev-network
+    command: npm run dev
+
+volumes:
+  mongodb_data_dev:
+
+networks:
+  time-tracker-dev-network:
+    driver: bridge
