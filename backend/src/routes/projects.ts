@@ -29,6 +29,24 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/projects',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get all projects for the authenticated user',
+        tags: ['Projects'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              projects: {
+                type: 'array',
+                items: { $ref: 'Project#' },
+              },
+            },
+          },
+          401: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -54,6 +72,32 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/projects',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Create a new project',
+        tags: ['Projects'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100},
+            description: { type: 'string', maxLength: 500},
+            color: { type: 'string', pattern: '^#[0-9A-F]{6}$'},
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              project: { $ref: 'Project#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -110,6 +154,29 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/projects/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get a specific project by ID',
+        tags: ['Projects'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              project: { $ref: 'Project#' },
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -145,6 +212,39 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/projects/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Update a project',
+        tags: ['Projects'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100},
+            description: { type: 'string', maxLength: 500},
+            color: { type: 'string', pattern: '^#[0-9A-F]{6}$'},
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              project: { $ref: 'Project#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -212,6 +312,29 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/projects/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Delete a project and all associated tasks and time entries',
+        tags: ['Projects'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {

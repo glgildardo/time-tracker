@@ -30,6 +30,31 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/tasks',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get all tasks for the authenticated user, optionally filtered by project',
+        tags: ['Tasks'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            projectId: { type: 'string'},
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              tasks: {
+                type: 'array',
+                items: { $ref: 'Task#' },
+              },
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -79,6 +104,33 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/tasks',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Create a new task',
+        tags: ['Tasks'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['name', 'projectId'],
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100},
+            description: { type: 'string', maxLength: 500},
+            projectId: { type: 'string'},
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              task: { $ref: 'Task#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -150,6 +202,29 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/tasks/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get a specific task by ID',
+        tags: ['Tasks'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              task: { $ref: 'Task#' },
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -185,6 +260,38 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/tasks/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Update a task',
+        tags: ['Tasks'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100},
+            description: { type: 'string', maxLength: 500},
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              task: { $ref: 'Task#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -254,6 +361,29 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/tasks/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Delete a task and all associated time entries',
+        tags: ['Tasks'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {

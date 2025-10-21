@@ -21,7 +21,33 @@ const loginSchema = z.object({
 
 export default async (fastify: FastifyInstance): Promise<void> => {
   // Register endpoint
-  fastify.post('/register', async (request, reply) => {
+  fastify.post('/register', {
+    schema: {
+      description: 'Register a new user account',
+      tags: ['Authentication'],
+      body: {
+        type: 'object',
+        required: ['email', 'password', 'name'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 6 },
+          name: { type: 'string', minLength: 1, maxLength: 50 },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            token: { type: 'string' },
+            user: { $ref: 'User#' },
+          },
+        },
+        400: { $ref: 'Error#' },
+        500: { $ref: 'Error#' },
+      },
+    },
+  }, async (request, reply) => {
     try {
       // Validate request body
       const validationResult = registerSchema.safeParse(request.body);
@@ -76,7 +102,33 @@ export default async (fastify: FastifyInstance): Promise<void> => {
   });
 
   // Login endpoint
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', {
+    schema: {
+      description: 'Authenticate user and get access token',
+      tags: ['Authentication'],
+      body: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email'},
+          password: { type: 'string'},
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            message: { type: 'string'},
+            token: { type: 'string'},
+            user: { $ref: 'User#' },
+          },
+        },
+        400: { $ref: 'Error#' },
+        401: { $ref: 'Error#' },
+        500: { $ref: 'Error#' },
+      },
+    },
+  }, async (request, reply) => {
     try {
       // Validate request body
       const validationResult = loginSchema.safeParse(request.body);
@@ -134,10 +186,26 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/me',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get current authenticated user information',
+        tags: ['Authentication'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              user: { $ref: 'User#' },
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
-        const user = await User.findById(request.user!.id).select('-password');
+        const user = await User.findById(request.user.id).select('-password');
 
         if (!user) {
           return reply.status(404).send({

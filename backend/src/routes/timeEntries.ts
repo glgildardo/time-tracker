@@ -44,6 +44,32 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/time-entries/start',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Start a timer for a specific task',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['taskId'],
+          properties: {
+            taskId: { type: 'string'},
+            description: { type: 'string', maxLength: 500},
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              timeEntry: { $ref: 'TimeEntry#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -115,6 +141,30 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/time-entries/stop',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Stop the currently active timer',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            description: { type: 'string', maxLength: 500},
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              timeEntry: { $ref: 'TimeEntry#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -171,6 +221,26 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/time-entries/active',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get the currently active timer',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              timeEntry: {
+                oneOf: [
+                  { $ref: 'TimeEntry#' },
+                  { type: 'null' }
+                ]
+              },
+            },
+          },
+          401: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -203,6 +273,39 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/time-entries',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Get time entries with optional filters',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            projectId: { type: 'string'},
+            taskId: { type: 'string'},
+            startDate: { type: 'string', format: 'date-time'},
+            endDate: { type: 'string', format: 'date-time'},
+            limit: { type: 'string', default: '50'},
+            offset: { type: 'string', default: '0'},
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              timeEntries: {
+                type: 'array',
+                items: { $ref: 'TimeEntry#' },
+              },
+              total: { type: 'number'},
+              limit: { type: 'number'},
+              offset: { type: 'number'},
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -286,6 +389,39 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/time-entries/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Update a time entry',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        body: {
+          type: 'object',
+          properties: {
+            startTime: { type: 'string', format: 'date-time'},
+            endTime: { type: 'string', format: 'date-time'},
+            description: { type: 'string', maxLength: 500},
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+              timeEntry: { $ref: 'TimeEntry#' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
@@ -359,6 +495,29 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     '/time-entries/:id',
     {
       preHandler: authenticateToken,
+      schema: {
+        description: 'Delete a time entry',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string'},
+          },
+          required: ['id'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string'},
+            },
+          },
+          401: { $ref: 'Error#' },
+          404: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
     },
     async (request: FastifyRequest, reply) => {
       try {
