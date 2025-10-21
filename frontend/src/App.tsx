@@ -7,12 +7,10 @@ import { PublicRoute } from '@/components/PublicRoute';
 import { Layout } from '@/components/Layout';
 import { LoginPage } from '@/pages/Login';
 import { RegisterPage } from '@/pages/Register';
-
-// Placeholder components for now
-const Dashboard = () => <div className="p-8"><h1 className="text-2xl font-bold">Dashboard</h1></div>;
-const Projects = () => <div className="p-8"><h1 className="text-2xl font-bold">Projects</h1></div>;
-const Tasks = () => <div className="p-8"><h1 className="text-2xl font-bold">Tasks</h1></div>;
-const TimeEntries = () => <div className="p-8"><h1 className="text-2xl font-bold">Time Entries</h1></div>;
+import ProjectsPage from '@/pages/Projects';
+import TasksPage from '@/pages/Tasks';
+import TimeEntriesPage from '@/pages/TimeEntries';
+import DashboardPage from '@/pages/Dashboard';
 
 function App() {
   return (
@@ -45,7 +43,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <Dashboard />
+                      <DashboardPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -55,7 +53,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <Projects />
+                      <ProjectsPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -65,7 +63,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <Tasks />
+                      <TasksPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -75,7 +73,7 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Layout>
-                      <TimeEntries />
+                      <TimeEntriesPage />
                     </Layout>
                   </ProtectedRoute>
                 }
