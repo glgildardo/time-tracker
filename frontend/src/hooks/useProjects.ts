@@ -1,46 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-
-// Types
-export interface Project {
-  _id: string;
-  name: string;
-  description?: string;
-  color: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Task {
-  _id: string;
-  name: string;
-  description?: string;
-  projectId: string | Project;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TimeEntry {
-  _id: string;
-  taskId: string | Task;
-  userId: string;
-  startTime: string;
-  endTime?: string;
-  duration?: number;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { projectsService } from '@/services';
+import type { CreateProjectRequest, UpdateProjectRequest } from '@/types';
 
 // Projects hooks
 export const useProjects = () => {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const response = await api.get('/projects');
-      return response.data.projects as Project[];
+      const response = await projectsService.getProjects();
+      return response.projects;
     },
   });
 };
@@ -49,8 +17,8 @@ export const useProject = (id: string) => {
   return useQuery({
     queryKey: ['projects', id],
     queryFn: async () => {
-      const response = await api.get(`/projects/${id}`);
-      return response.data.project as Project;
+      const response = await projectsService.getProject(id);
+      return response.project;
     },
     enabled: !!id,
   });
@@ -60,9 +28,9 @@ export const useCreateProject = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; color?: string }) => {
-      const response = await api.post('/projects', data);
-      return response.data.project as Project;
+    mutationFn: async (data: CreateProjectRequest) => {
+      const response = await projectsService.createProject(data);
+      return response.project;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -74,9 +42,9 @@ export const useUpdateProject = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Project> }) => {
-      const response = await api.put(`/projects/${id}`, data);
-      return response.data.project as Project;
+    mutationFn: async ({ id, data }: { id: string; data: UpdateProjectRequest }) => {
+      const response = await projectsService.updateProject(id, data);
+      return response.project;
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -90,7 +58,7 @@ export const useDeleteProject = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/projects/${id}`);
+      await projectsService.deleteProject(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });

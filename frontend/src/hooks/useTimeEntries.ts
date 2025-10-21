@@ -1,25 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import type { TimeEntry } from './useProjects';
+import { timeEntriesService } from '@/services';
+import type { 
+  TimeEntriesFilters, 
+  StartTimerRequest, 
+  StopTimerRequest, 
+  UpdateTimeEntryRequest 
+} from '@/types';
 
 // Time Entries hooks
-export const useTimeEntries = (filters?: {
-  projectId?: string;
-  taskId?: string;
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
-  offset?: number;
-}) => {
+export const useTimeEntries = (filters?: TimeEntriesFilters) => {
   return useQuery({
     queryKey: ['timeEntries', filters],
     queryFn: async () => {
-      const response = await api.get('/time-entries', { params: filters });
+      const response = await timeEntriesService.getTimeEntries(filters);
       return {
-        timeEntries: response.data.timeEntries as TimeEntry[],
-        total: response.data.total as number,
-        limit: response.data.limit as number,
-        offset: response.data.offset as number,
+        timeEntries: response.timeEntries,
+        total: response.total,
+        limit: response.limit,
+        offset: response.offset,
       };
     },
   });
@@ -29,8 +27,8 @@ export const useActiveTimer = () => {
   return useQuery({
     queryKey: ['activeTimer'],
     queryFn: async () => {
-      const response = await api.get('/time-entries/active');
-      return response.data.timeEntry as TimeEntry | null;
+      const response = await timeEntriesService.getActiveTimer();
+      return response.timeEntry;
     },
     refetchInterval: 1000, // Poll every second for active timer
   });
@@ -40,9 +38,9 @@ export const useStartTimer = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: { taskId: string; description?: string }) => {
-      const response = await api.post('/time-entries/start', data);
-      return response.data.timeEntry as TimeEntry;
+    mutationFn: async (data: StartTimerRequest) => {
+      const response = await timeEntriesService.startTimer(data);
+      return response.timeEntry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
@@ -55,9 +53,9 @@ export const useStopTimer = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data?: { description?: string }) => {
-      const response = await api.post('/time-entries/stop', data || {});
-      return response.data.timeEntry as TimeEntry;
+    mutationFn: async (data?: StopTimerRequest) => {
+      const response = await timeEntriesService.stopTimer(data);
+      return response.timeEntry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
@@ -70,9 +68,9 @@ export const useUpdateTimeEntry = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<TimeEntry> }) => {
-      const response = await api.put(`/time-entries/${id}`, data);
-      return response.data.timeEntry as TimeEntry;
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTimeEntryRequest }) => {
+      const response = await timeEntriesService.updateTimeEntry(id, data);
+      return response.timeEntry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
@@ -86,7 +84,7 @@ export const useDeleteTimeEntry = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/time-entries/${id}`);
+      await timeEntriesService.deleteTimeEntry(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timeEntries'] });

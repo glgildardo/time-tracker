@@ -1,15 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import type { Task } from './useProjects';
+import { tasksService } from '@/services';
+import type { CreateTaskRequest, UpdateTaskRequest } from '@/types';
 
 // Tasks hooks
 export const useTasks = (projectId?: string) => {
   return useQuery({
     queryKey: ['tasks', projectId],
     queryFn: async () => {
-      const params = projectId ? { projectId } : {};
-      const response = await api.get('/tasks', { params });
-      return response.data.tasks as Task[];
+      const response = await tasksService.getTasks(projectId);
+      return response.tasks;
     },
   });
 };
@@ -18,8 +17,8 @@ export const useTask = (id: string) => {
   return useQuery({
     queryKey: ['tasks', id],
     queryFn: async () => {
-      const response = await api.get(`/tasks/${id}`);
-      return response.data.task as Task;
+      const response = await tasksService.getTask(id);
+      return response.task;
     },
     enabled: !!id,
   });
@@ -29,9 +28,9 @@ export const useCreateTask = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; projectId: string }) => {
-      const response = await api.post('/tasks', data);
-      return response.data.task as Task;
+    mutationFn: async (data: CreateTaskRequest) => {
+      const response = await tasksService.createTask(data);
+      return response.task;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -44,9 +43,9 @@ export const useUpdateTask = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Task> }) => {
-      const response = await api.put(`/tasks/${id}`, data);
-      return response.data.task as Task;
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTaskRequest }) => {
+      const response = await tasksService.updateTask(id, data);
+      return response.task;
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -60,7 +59,7 @@ export const useDeleteTask = () => {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/tasks/${id}`);
+      await tasksService.deleteTask(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
