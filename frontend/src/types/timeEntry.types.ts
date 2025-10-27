@@ -48,7 +48,7 @@ export interface TimeEntriesResponse {
 }
 
 export interface TimeEntryResponse {
-  timeEntry: TimeEntry;
+  timeEntry: TimeEntry | null;
 }
 
 export interface StartTimerResponse {

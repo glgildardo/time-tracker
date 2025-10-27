@@ -1,0 +1,138 @@
+# .cursorrules
+rules:
+  - id: no-repetition-text
+    description: Prevent repeated ideas or redundant phrasing.
+    pattern: ".*"
+    instruction: |
+      Do not repeat yourself. Avoid restating previously explained ideas or paraphrasing the same sentence.
+      Each paragraph must add new information, a decision, or an actionable step.
+      Keep the answer concise and progressive — no circular explanations.
+
+  - id: no-duplicate-code
+    description: Prevent code duplication and enforce DRY principles.
+    pattern: ".*"
+    instruction: |
+      Do not duplicate logic, code blocks, or styling.
+      If two or more snippets share similar intent or structure, abstract them into a reusable function,
+      custom hook, or component.
+      Centralize constants, schemas, and type definitions in shared modules.
+      Prefer composition and parametrization over copy/paste.
+
+  - id: solid-principles
+    description: Apply SOLID principles in React and TypeScript code.
+    pattern: ".*"
+    instruction: |
+      - **S (Single Responsibility):** Each component, hook, or service should have one clear purpose.
+      - **O (Open/Closed):** Components should be extendable via props or composition, not by direct modification.
+      - **L (Liskov Substitution):** Components and types should be interchangeable without breaking behavior.
+      - **I (Interface Segregation):** Avoid large, "god" props interfaces; split into smaller, focused ones.
+      - **D (Dependency Inversion):** Depend on abstractions. Inject dependencies via props, context, or hooks rather than hard imports.
+
+  - id: react-best-practices
+    description: Modern React and TypeScript guidelines.
+    pattern: ".*"
+    instruction: |
+      - Keep state as local as possible; avoid derived or redundant state.
+      - Use hooks responsibly; split effects by responsibility.
+      - Use `useMemo`/`useCallback` only for expensive operations or when memoization prevents re-renders.
+      - Use stable and semantic `key` props; avoid indexes in dynamic lists.
+      - Avoid inline function/object creation in frequently rendered components.
+      - Apply lazy loading and code-splitting for heavy pages.
+      - Always ensure accessibility (`aria-*`, labels, focus handling).
+      - When using **shadcn/ui** and **Tailwind CSS**, prefer design consistency: use shadcn components as base UI,
+        keep utility classes readable and grouped logically.
+
+  - id: typescript-best-practices
+    description: Enforce strong typing and clarity.
+    pattern: ".*"
+    instruction: |
+      - Enable `strict` mode.
+      - Avoid `any`; use generics, discriminated unions, and utility types.
+      - Model domain entities with reusable and shared types.
+      - Avoid boolean flags for logic branching — use enums or union types instead.
+      - Keep all public types in `/types` and import from there consistently.
+
+  - id: zustand-best-practices
+    description: Guidelines for Zustand state management.
+    pattern: ".*"
+    instruction: |
+      - Keep Zustand stores minimal and domain-specific — one store per domain (e.g., authStore, uiStore, playerStore).
+      - Never store derived values; compute them via selectors or computed getters.
+      - Use `useShallow` or selector equality functions to avoid unnecessary re-renders.
+      - Group store logic (actions, computed state) inside the store definition for cohesion.
+      - Persist only necessary state (use middleware like `persist`).
+      - Do not mutate state outside the store’s `set()` function.
+      - Document each store with a short description of its purpose and shape.
+
+  - id: tanstack-query-best-practices
+    description: Guidelines for TanStack Query usage.
+    pattern: ".*"
+    instruction: |
+      - Define clear query keys; use tuples for deterministic caching (e.g., `['user', userId]`).
+      - Avoid manual refetches — rely on `invalidateQueries` when the cache changes.
+      - Co-locate queries with the feature using them; use a `hooks/queries` folder if shared.
+      - Use `enabled` flags to prevent fetching without necessary params.
+      - Cache responses for a meaningful time; don’t over-fetch.
+      - Handle loading, error, and empty states gracefully.
+      - Avoid mixing query and mutation logic in the same hook.
+      - Use optimistic updates with rollback for mutations that affect UI state.
+      - Prefer using `queryFn` composition with reusable API adapters or service functions.
+
+  - id: file-structure
+    description: Recommended folder and responsibility separation.
+    pattern: ".*"
+    instruction: |
+      - `/components` for pure UI and presentational logic.
+      - `/hooks` for reusable logic.
+      - `/services` for data fetching or side-effects.
+      - `/lib` for utilities, adapters, and helpers.
+      - `/types` for global types/interfaces.
+      - `/store` for Zustand stores.
+      - `/queries` for TanStack Query hooks.
+      Keep imports clean and relative only within their domains; avoid cross-domain coupling.
+
+  - id: review-style-senior
+    description: Senior-level code review tone and depth.
+    pattern: ".*"
+    instruction: |
+      Comment only where it adds value — bugs, design flaws, performance, or maintainability.
+      Avoid nitpicking unless it’s a systemic pattern.
+      Format comments as:
+        - **[Blocking]:** Must fix before merge
+        - **[Non-blocking]:** Suggestion for improvement
+      Provide short context + a direct action (or diff snippet if needed).
+      Don’t repeat comments across similar occurrences; note “applies to all similar cases”.
+
+  - id: comments-in-code-only-when-useful
+    description: Comment only where reasoning or edge cases need documentation.
+    pattern: ".*"
+    instruction: |
+      Do not comment what’s obvious.
+      Comment decisions, assumptions, or invariants.
+      Prefer clear naming over long comments.
+      If adding TODOs, include expiration or ticket reference.
+      Avoid redundant comments describing what the code already shows.
+
+  - id: output-format
+    description: Output and code review formatting.
+    pattern: ".*"
+    instruction: |
+      Structure responses with:
+      1. Key findings (ordered by priority)
+      2. Minimal diffs or snippets for each fix
+      3. A short “Refactor Plan” section with up to 3 actionable steps
+      Avoid restating code unless it’s changed.
+
+  - id: perf-and-safety
+    description: Enforce performance and safe patterns.
+    pattern: ".*"
+    instruction: |
+      - Use memoization for expensive re-renders.
+      - Avoid unguarded effects or uncontrolled dependencies.
+      - Handle async race conditions and stale closures properly.
+      - Prevent unnecessary API calls or overfetching.
+      - Always clean up effects and event listeners.
+
+---
+alwaysApply: true
+---

@@ -1,165 +1,243 @@
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Play, Square, MoreVertical } from "lucide-react"
-
-const timeEntries = [
-  {
-    id: 1,
-    task: "Design homepage mockups",
-    project: "Website Redesign",
-    date: "2025-10-20",
-    startTime: "09:00",
-    endTime: "12:30",
-    duration: 3.5,
-    status: "completed",
-  },
-  {
-    id: 2,
-    task: "Implement user authentication",
-    project: "Mobile App Development",
-    date: "2025-10-20",
-    startTime: "13:30",
-    endTime: "17:45",
-    duration: 4.25,
-    status: "completed",
-  },
-  {
-    id: 3,
-    task: "Design homepage mockups",
-    project: "Website Redesign",
-    date: "2025-10-19",
-    startTime: "10:00",
-    endTime: "12:00",
-    duration: 2.0,
-    status: "completed",
-  },
-  {
-    id: 4,
-    task: "Create button component variants",
-    project: "UI Component Library",
-    date: "2025-10-19",
-    startTime: "14:00",
-    endTime: "16:30",
-    duration: 2.5,
-    status: "completed",
-  },
-  {
-    id: 5,
-    task: "Code review and refactoring",
-    project: "Mobile App Development",
-    date: "2025-10-18",
-    startTime: "09:30",
-    endTime: "13:15",
-    duration: 3.75,
-    status: "completed",
-  },
-  {
-    id: 6,
-    task: "Database schema optimization",
-    project: "Database Migration",
-    date: "2025-10-18",
-    startTime: "14:00",
-    endTime: "18:00",
-    duration: 4.0,
-    status: "completed",
-  },
-  {
-    id: 7,
-    task: "Implement user authentication",
-    project: "Mobile App Development",
-    date: "2025-10-17",
-    startTime: "10:00",
-    endTime: "14:00",
-    duration: 4.0,
-    status: "completed",
-  },
-]
-
-const currentEntry = {
-  task: "Design homepage mockups",
-  project: "Website Redesign",
-  startTime: "14:30",
-  elapsed: "01:23:45",
-}
+import { Plus, Play, Square, MoreVertical, Loader2 } from "lucide-react"
+import {
+  useTimeEntries,
+  useActiveTimer,
+  useStopTimer,
+} from "@/hooks/useTimeEntries"
+import { formatDateTime, formatDurationSeconds, formatDurationHours } from "@/lib/utils"
+import { StartTimerDialog } from "@/components/time-entries/StartTimerDialog"
+import { EditTimeEntryDialog } from "@/components/time-entries/EditTimeEntryDialog"
+import { DeleteTimeEntryDialog } from "@/components/time-entries/DeleteTimeEntryDialog"
+import type { TimeEntry } from "@/types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function TimeEntriesPage() {
+  const [startDialogOpen, setStartDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null)
+  const [elapsedTime, setElapsedTime] = useState<string>("00:00:00")
+
+  const { data: timeEntriesData, isLoading: entriesLoading } = useTimeEntries()
+  const { data: activeTimer, isLoading: activeLoading } = useActiveTimer()
+  const stopTimer = useStopTimer()
+
+  // Client-side elapsed time calculation for active timer
+  useEffect(() => {
+    if (!activeTimer) {
+      setElapsedTime("00:00:00")
+      return
+    }
+
+    const updateElapsed = () => {
+      const startTime = new Date(activeTimer.startTime).getTime()
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - startTime) / 1000)
+      setElapsedTime(formatDurationSeconds(elapsedSeconds))
+    }
+
+    updateElapsed()
+    const interval = setInterval(updateElapsed, 1000)
+
+    return () => clearInterval(interval)
+  }, [activeTimer])
+
+  const handleStopTimer = async () => {
+    await stopTimer.mutateAsync(undefined)
+  }
+
+  const handleEdit = (entry: TimeEntry) => {
+    setSelectedEntry(entry)
+    setEditDialogOpen(true)
+  }
+
+  const handleDelete = (entry: TimeEntry) => {
+    setSelectedEntry(entry)
+    setDeleteDialogOpen(true)
+  }
+
+  const timeEntries = timeEntriesData?.timeEntries || []
+
   return (
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="font-bold text-3xl text-balance">Time Entries</h1>
+          <h1 className="text-3xl font-bold text-balance">Time Entries</h1>
           <p className="text-muted-foreground">Track and manage your time logs.</p>
         </div>
-        <Button>
+        <Button onClick={() => setStartDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Entry
         </Button>
       </div>
 
-      <Card className="mb-6 border-primary/50 bg-primary/5">
-        <CardContent className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-              <Play className="h-6 w-6 fill-primary-foreground text-primary-foreground" />
+      {/* Active Timer Card */}
+      {activeLoading ? (
+        <Card className="mb-6 border-primary/50 bg-primary/5">
+          <CardContent className="flex items-center justify-center p-6">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </CardContent>
+        </Card>
+      ) : activeTimer ? (
+        <Card className="mb-6 border-primary/50 bg-primary/5">
+          <CardContent className="flex items-center justify-between p-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
+                <Play className="h-6 w-6 fill-primary-foreground text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold">
+                  {typeof activeTimer.taskId === "object"
+                    ? activeTimer.taskId.name
+                    : "Task"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {formatDateTime(activeTimer.startTime, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold">{currentEntry.task}</h3>
-              <p className="text-muted-foreground text-sm">{currentEntry.project}</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-muted-foreground text-sm">Started at {currentEntry.startTime}</p>
-              <p className="font-mono font-bold text-2xl">{currentEntry.elapsed}</p>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">
+                  Started at {formatDateTime(activeTimer.startTime, { hour: "2-digit", minute: "2-digit" })}
+                </p>
+                <p className="font-mono text-2xl font-bold">{elapsedTime}</p>
+              </div>
+              <Button variant="destructive" size="lg" onClick={handleStopTimer} disabled={stopTimer.isPending}>
+                <Square className="mr-2 h-4 w-4" />
+                {stopTimer.isPending ? "Stopping..." : "Stop"}
+              </Button>
             </div>
-            <Button variant="destructive" size="lg">
-              <Square className="mr-2 h-4 w-4" />
-              Stop
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="mb-6 border-dashed">
+          <CardContent className="flex flex-col items-center justify-center p-8">
+            <p className="mb-4 text-muted-foreground">No active timer</p>
+            <Button onClick={() => setStartDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Start New Timer
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <div className="space-y-3">
-        {timeEntries.map((entry) => (
-          <Card key={entry.id}>
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{entry.task}</h3>
-                  <Badge variant="outline" className="text-xs">
-                    {entry.project}
-                  </Badge>
+      {/* Time Entries List */}
+      {entriesLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : timeEntries.length === 0 ? (
+        <Card>
+          <CardContent className="flex items-center justify-center p-8">
+            <p className="text-muted-foreground">No time entries yet</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {timeEntries.map((entry) => (
+            <Card key={entry._id}>
+              <CardContent className="flex items-center justify-between p-4">
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium">
+                      {typeof entry.taskId === "object"
+                        ? entry.taskId.name
+                        : "Task"}
+                    </h3>
+                    {typeof entry.taskId === "object" &&
+                      typeof entry.taskId.projectId === "object" && (
+                        <Badge variant="outline" className="text-xs">
+                          {entry.taskId.projectId.name}
+                        </Badge>
+                      )}
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>
+                      {formatDateTime(entry.startTime, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      {formatDateTime(entry.startTime, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {entry.endTime &&
+                        ` - ${formatDateTime(entry.endTime, {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}`}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-muted-foreground text-sm">
-                  <span>
-                    {new Date(entry.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <span>•</span>
-                  <span>
-                    {entry.startTime} - {entry.endTime}
-                  </span>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-mono font-semibold text-lg">{entry.duration.toFixed(2)}h</p>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    {entry.duration ? (
+                      <p className="font-mono text-lg font-semibold">
+                        {formatDurationHours(entry.duration)}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Running...</p>
+                    )}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(entry)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(entry)}
+                        className="text-destructive"
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <StartTimerDialog
+        open={startDialogOpen}
+        onOpenChange={setStartDialogOpen}
+      />
+      <EditTimeEntryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        timeEntry={selectedEntry}
+      />
+      <DeleteTimeEntryDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        timeEntry={selectedEntry}
+      />
     </div>
   )
 }

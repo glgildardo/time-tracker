@@ -11,12 +11,11 @@ const tasksQueryKey = {
 // Tasks hooks
 export const useTasks = (projectId?: string) => {
   return useQuery({
-    queryKey: tasksQueryKey.byProjectId(projectId ?? ''),
+    queryKey: projectId ? tasksQueryKey.byProjectId(projectId) : tasksQueryKey.all,
     queryFn: async () => {
       const response = await tasksService.getTasks(projectId);
       return response.tasks;
     },
-    enabled: !!projectId,
   });
 };
 

@@ -38,6 +38,8 @@ const start = async (): Promise<void> => {
 
     console.log(`🚀 Server running on http://localhost:${actualPort}`);
     console.log(`📊 Health check: http://localhost:${actualPort}/health`);
+    console.log(`📘 Swagger UI: http://localhost:${actualPort}/docs`);
+    console.log(`🧾 OpenAPI JSON: http://localhost:${actualPort}/docs/json`);
     console.log(`🌍 Environment: ${config.NODE_ENV}`);
   } catch (error) {
     console.error('❌ Failed to start server:', error);

@@ -231,7 +231,26 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             properties: {
               timeEntry: {
                 oneOf: [
-                  { $ref: 'TimeEntry#' },
+                  { 
+                    type: 'object',
+                    properties: {
+                      _id: { type: 'string' },
+                      taskId: { 
+                        oneOf: [
+                          { type: 'string' },
+                          { type: 'object' }
+                        ]
+                      },
+                      userId: { type: 'string' },
+                      startTime: { type: 'string', format: 'date-time' },
+                      endTime: { type: 'string', format: 'date-time' },
+                      duration: { type: 'number' },
+                      description: { type: 'string' },
+                      status: { type: 'string', enum: ['in-progress', 'completed'] },
+                      createdAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
+                    },
+                  },
                   { type: 'null' }
                 ]
               },
@@ -255,9 +274,50 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        return reply.send({
-          timeEntry: activeTimer,
-        });
+        // Build a plain serializable object that only includes defined fields
+        const serialized: Record<string, unknown> = {
+          _id: String((activeTimer as any)._id),
+          userId: String((activeTimer as any).userId),
+          startTime: (activeTimer as any).startTime instanceof Date
+            ? (activeTimer as any).startTime.toISOString()
+            : String((activeTimer as any).startTime),
+          status: (activeTimer as any).status,
+          createdAt: (activeTimer as any).createdAt instanceof Date
+            ? (activeTimer as any).createdAt.toISOString()
+            : String((activeTimer as any).createdAt),
+          updatedAt: (activeTimer as any).updatedAt instanceof Date
+            ? (activeTimer as any).updatedAt.toISOString()
+            : String((activeTimer as any).updatedAt),
+        };
+
+        // taskId can be string or populated object
+        const tId = (activeTimer as any).taskId;
+        if (tId && typeof tId === 'object' && ('_id' in tId || 'name' in tId)) {
+          const projectId = (tId as any).projectId;
+          (serialized as any).taskId = {
+            _id: String((tId as any)._id ?? ''),
+            name: (tId as any).name,
+            projectId: projectId && typeof projectId === 'object' && '_id' in projectId
+              ? String((projectId as any)._id)
+              : (projectId != null ? String(projectId) : undefined),
+          };
+        } else if (tId != null) {
+          (serialized as any).taskId = String(tId);
+        }
+
+        if ((activeTimer as any).endTime) {
+          (serialized as any).endTime = (activeTimer as any).endTime instanceof Date
+            ? (activeTimer as any).endTime.toISOString()
+            : String((activeTimer as any).endTime);
+        }
+        if (typeof (activeTimer as any).duration === 'number') {
+          (serialized as any).duration = (activeTimer as any).duration;
+        }
+        if ((activeTimer as any).description) {
+          (serialized as any).description = (activeTimer as any).description;
+        }
+
+        return reply.send({ timeEntry: serialized });
       } catch (error) {
         fastify.log.error(error);
         return reply.status(500).send({

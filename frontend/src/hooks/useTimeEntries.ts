@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { timeEntriesService } from '@/services';
 import type { 
   TimeEntriesFilters, 
@@ -31,14 +32,52 @@ export const useTimeEntries = (filters?: TimeEntriesFilters) => {
 };
 
 export const useActiveTimer = () => {
-  return useQuery({
+  const [isVisible, setIsVisible] = useState(true);
+  const [isFocused, setIsFocused] = useState(true);
+
+  useEffect(() => {
+    // Handle page visibility
+    const handleVisibilityChange = () => {
+      setIsVisible(!document.hidden);
+    };
+
+    // Handle window focus/blur
+    const handleFocus = () => setIsFocused(true);
+    const handleBlur = () => setIsFocused(false);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  const query = useQuery({
     queryKey: timeEntriesQueryKey.activeTimer(),
     queryFn: async () => {
       const response = await timeEntriesService.getActiveTimer();
       return response.timeEntry;
     },
-    refetchInterval: 1000, // Poll every second for active timer
+    refetchInterval: (query) => {
+      // No active timer - don't poll
+      if (!query.state.data) return 0;
+      
+      // Page hidden - poll every 15 seconds
+      if (!isVisible) return 15000;
+      
+      // Page visible but not focused - poll every 5 seconds
+      if (!isFocused) return 5000;
+      
+      // Page visible and focused - poll every second
+      return 1000;
+    },
   });
+
+  return query;
 };
 
 export const useStartTimer = () => {
