@@ -1,9 +1,8 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { Task } from '../models/Task';
-import { Project } from '../models/Project';
-import { TimeEntry } from '../models/TimeEntry';
 import { authenticateToken } from '../middleware/auth';
+import { tasksController } from '../controllers/tasks.controller';
+import { handleError } from '../utils/errorHandler';
 
 // Validation schemas
 const createTaskSchema = z.object({
@@ -75,41 +74,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
         const { projectId } = request.query as z.infer<
           typeof getTasksQuerySchema
         >;
-
-        const filter: { userId: string; projectId?: string } = {
-          userId: request.user.id,
-        };
-        if (projectId) {
-          // Verify the project belongs to the user
-          const project = await Project.findOne({
-            _id: projectId,
-            userId: request.user.id,
-          });
-
-          if (!project) {
-            return reply.status(404).send({
-              error: 'Project not found',
-              message: 'Project does not exist or you do not have access to it',
-            });
-          }
-
-          filter.projectId = projectId;
-        }
-
-        const tasks = await Task.find(filter)
-          .populate('projectId', 'name color')
-          .sort({ createdAt: -1 })
-          .lean();
-
-        return reply.send({
-          tasks,
-        });
+        const result = await tasksController.getAllTasks(request.user.id, projectId);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to fetch tasks',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -162,58 +131,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const { name, description, projectId, priority, status, estimatedHours } = validationResult.data;
-
-        // Verify the project belongs to the user
-        const project = await Project.findOne({
-          _id: projectId,
-          userId: request.user.id,
-        });
-
-        if (!project) {
-          return reply.status(404).send({
-            error: 'Project not found',
-            message: 'Project does not exist or you do not have access to it',
-          });
-        }
-
-        // Check if task with same name already exists in this project
-        const existingTask = await Task.findOne({
-          userId: request.user.id,
-          projectId,
-          name,
-        });
-
-        if (existingTask) {
-          return reply.status(400).send({
-            error: 'Task already exists',
-            message: 'A task with this name already exists in this project',
-          });
-        }
-
-        const task = new Task({
-          name,
-          description,
-          projectId,
-          priority,
-          status,
-          estimatedHours,
-          userId: request.user.id,
-        });
-
-        await task.save();
-        await task.populate('projectId', 'name color');
-
-        return reply.status(201).send({
-          message: 'Task created successfully',
-          task: task.toObject(),
-        });
+        const result = await tasksController.createTask(request.user.id, validationResult.data);
+        return reply.status(201).send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to create task',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -250,30 +172,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     async (request: FastifyRequest, reply) => {
       try {
         const { id } = request.params as { id: string };
-
-        const task = await Task.findOne({
-          _id: id,
-          userId: request.user.id,
-        })
-          .populate('projectId', 'name color')
-          .lean();
-
-        if (!task) {
-          return reply.status(404).send({
-            error: 'Task not found',
-            message: 'Task does not exist or you do not have access to it',
-          });
-        }
-
-        return reply.send({
-          task,
-        });
+        const result = await tasksController.getTaskById(request.user.id, id);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to fetch task',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -333,51 +236,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const updateData = validationResult.data;
-
-        const task = await Task.findOne({
-          _id: id,
-          userId: request.user.id,
-        });
-
-        if (!task) {
-          return reply.status(404).send({
-            error: 'Task not found',
-            message: 'Task does not exist or you do not have access to it',
-          });
-        }
-
-        // Check if name is being updated and if it conflicts with existing task
-        if (updateData.name && updateData.name !== task.name) {
-          const existingTask = await Task.findOne({
-            userId: request.user.id,
-            projectId: task.projectId,
-            name: updateData.name,
-            _id: { $ne: id },
-          });
-
-          if (existingTask) {
-            return reply.status(400).send({
-              error: 'Task name already exists',
-              message: 'A task with this name already exists in this project',
-            });
-          }
-        }
-
-        Object.assign(task, updateData);
-        await task.save();
-        await task.populate('projectId', 'name color');
-
-        return reply.send({
-          message: 'Task updated successfully',
-          task: task.toObject(),
-        });
+        const result = await tasksController.updateTask(request.user.id, id, validationResult.data);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to update task',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -414,32 +277,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     async (request: FastifyRequest, reply) => {
       try {
         const { id } = request.params as { id: string };
-
-        const task = await Task.findOne({
-          _id: id,
-          userId: request.user.id,
-        });
-
-        if (!task) {
-          return reply.status(404).send({
-            error: 'Task not found',
-            message: 'Task does not exist or you do not have access to it',
-          });
-        }
-
-        // Delete all associated time entries
-        await TimeEntry.deleteMany({ taskId: id });
-        await Task.deleteOne({ _id: id });
-
-        return reply.send({
-          message: 'Task deleted successfully',
-        });
+        const result = await tasksController.deleteTask(request.user.id, id);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to delete task',
-        });
+        handleError(error, reply);
       }
     }
   );

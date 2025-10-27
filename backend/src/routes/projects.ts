@@ -1,9 +1,8 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { Project } from '../models/Project';
-import { Task } from '../models/Task';
-import { TimeEntry } from '../models/TimeEntry';
 import { authenticateToken } from '../middleware/auth';
+import { projectsController } from '../controllers/projects.controller';
+import { handleError } from '../utils/errorHandler';
 
 // Validation schemas
 const createProjectSchema = z.object({
@@ -63,19 +62,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     },
     async (request: FastifyRequest, reply) => {
       try {
-        const projects = await Project.find({ userId: request.user.id }).sort({
-          createdAt: -1,
-        });
-
-        return reply.send({
-          projects,
-        });
+        const result = await projectsController.getAllProjects(request.user.id);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to fetch projects',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -127,43 +118,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const { name, description, color, client, status, budget } = validationResult.data;
-
-        // Check if project with same name already exists for this user
-        const existingProject = await Project.findOne({
-          userId: request.user.id,
-          name,
-        });
-
-        if (existingProject) {
-          return reply.status(400).send({
-            error: 'Project already exists',
-            message: 'A project with this name already exists',
-          });
-        }
-
-        const project = new Project({
-          name,
-          description,
-          color,
-          client,
-          status,
-          budget,
-          userId: request.user.id,
-        });
-
-        await project.save();
-
-        return reply.status(201).send({
-          message: 'Project created successfully',
-          project,
-        });
+        const result = await projectsController.createProject(request.user.id, validationResult.data);
+        return reply.status(201).send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to create project',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -200,28 +159,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     async (request: FastifyRequest, reply) => {
       try {
         const { id } = request.params as { id: string };
-
-        const project = await Project.findOne({
-          _id: id,
-          userId: request.user.id,
-        });
-
-        if (!project) {
-          return reply.status(404).send({
-            error: 'Project not found',
-            message: 'Project does not exist or you do not have access to it',
-          });
-        }
-
-        return reply.send({
-          project,
-        });
+        const result = await projectsController.getProjectById(request.user.id, id);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to fetch project',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -282,49 +224,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const updateData = validationResult.data;
-
-        const project = await Project.findOne({
-          _id: id,
-          userId: request.user.id,
-        });
-
-        if (!project) {
-          return reply.status(404).send({
-            error: 'Project not found',
-            message: 'Project does not exist or you do not have access to it',
-          });
-        }
-
-        // Check if name is being updated and if it conflicts with existing project
-        if (updateData.name && updateData.name !== project.name) {
-          const existingProject = await Project.findOne({
-            userId: request.user.id,
-            name: updateData.name,
-            _id: { $ne: id },
-          });
-
-          if (existingProject) {
-            return reply.status(400).send({
-              error: 'Project name already exists',
-              message: 'A project with this name already exists',
-            });
-          }
-        }
-
-        Object.assign(project, updateData);
-        await project.save();
-
-        return reply.send({
-          message: 'Project updated successfully',
-          project,
-        });
+        const result = await projectsController.updateProject(request.user.id, id, validationResult.data);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to update project',
-        });
+        handleError(error, reply);
       }
     }
   );
@@ -361,35 +265,11 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     async (request: FastifyRequest, reply) => {
       try {
         const { id } = request.params as { id: string };
-
-        const project = await Project.findOne({
-          _id: id,
-          userId: request.user.id,
-        });
-
-        if (!project) {
-          return reply.status(404).send({
-            error: 'Project not found',
-            message: 'Project does not exist or you do not have access to it',
-          });
-        }
-
-        // Delete all associated tasks and time entries
-        await Task.deleteMany({ projectId: id });
-        await TimeEntry.deleteMany({
-          taskId: { $in: await Task.find({ projectId: id }).distinct('_id') },
-        });
-        await Project.deleteOne({ _id: id });
-
-        return reply.send({
-          message: 'Project deleted successfully',
-        });
+        const result = await projectsController.deleteProject(request.user.id, id);
+        return reply.send(result);
       } catch (error) {
         fastify.log.error(error);
-        return reply.status(500).send({
-          error: 'Internal Server Error',
-          message: 'Failed to delete project',
-        });
+        handleError(error, reply);
       }
     }
   );
