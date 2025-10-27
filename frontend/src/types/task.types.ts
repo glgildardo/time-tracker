@@ -9,6 +9,7 @@ export interface Task {
   userId: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
   status: 'pending' | 'in-progress' | 'completed';
+  timerStatus?: 'idle' | 'running' | 'paused' | 'stopped';
   estimatedHours?: number;
   createdAt: string;
   updatedAt: string;

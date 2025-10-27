@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useProjects } from "@/hooks/useProjects"
 import { useTasks } from "@/hooks/useTasks"
-import { useStartTimer } from "@/hooks/useTimeEntries"
+import { useStartTask } from "@/hooks/useTaskTimer"
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,7 @@ export function StartTimerDialog({ open, onOpenChange }: StartTimerDialogProps) 
 
   const { data: projects = [], isLoading: projectsLoading } = useProjects()
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(projectId)
-  const startTimer = useStartTimer()
+  const startTimer = useStartTask()
 
   // Tasks will only be fetched when projectId is provided (due to enabled: !!projectId in useTasks)
 
@@ -41,10 +41,7 @@ export function StartTimerDialog({ open, onOpenChange }: StartTimerDialogProps) 
     e.preventDefault()
     if (!taskId) return
 
-    await startTimer.mutateAsync({
-      taskId,
-      description: description || undefined,
-    })
+    await startTimer.mutateAsync(taskId)
 
     // Reset form
     setProjectId("")

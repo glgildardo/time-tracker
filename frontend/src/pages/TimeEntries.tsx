@@ -3,11 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Play, Square, MoreVertical, Loader2 } from "lucide-react"
-import {
-  useTimeEntries,
-  useActiveTimer,
-  useStopTimer,
-} from "@/hooks/useTimeEntries"
+import { useTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
 import { formatDateTime, formatDurationSeconds, formatDurationHuman } from "@/lib/utils"
 import { StartTimerDialog } from "@/components/time-entries/StartTimerDialog"
 import { EditTimeEntryDialog } from "@/components/time-entries/EditTimeEntryDialog"
@@ -52,6 +48,7 @@ export default function TimeEntriesPage() {
   }, [activeTimer])
 
   const handleStopTimer = async () => {
+    if (!activeTimer) return
     await stopTimer.mutateAsync(undefined)
   }
 
@@ -101,10 +98,7 @@ export default function TimeEntriesPage() {
                     : "Task"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {formatDateTime(activeTimer.startTime, {
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  Active timer
                 </p>
               </div>
             </div>
@@ -116,10 +110,14 @@ export default function TimeEntriesPage() {
                 </p>
                 <p className="font-mono text-2xl font-bold">{elapsedTime}</p>
               </div>
-              <Button variant="destructive" size="lg" onClick={handleStopTimer} disabled={stopTimer.isPending}>
-                <Square className="mr-2 h-4 w-4" />
-                {stopTimer.isPending ? "Stopping..." : "Stop"}
-              </Button>
+              
+              {/* Timer Control Button */}
+              <div className="flex gap-2">
+                <Button variant="destructive" size="lg" onClick={handleStopTimer} disabled={stopTimer.isPending}>
+                  <Square className="mr-2 h-4 w-4" />
+                  {stopTimer.isPending ? "Stopping..." : "Stop"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

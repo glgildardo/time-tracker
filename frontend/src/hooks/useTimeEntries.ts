@@ -7,6 +7,7 @@ import type {
   StopTimerRequest, 
   UpdateTimeEntryRequest 
 } from '@/types';
+import { REFRESH_INTERVAL } from '@/lib/constants';
 
 const timeEntriesQueryKey = {
   all: ['timeEntries'],
@@ -64,16 +65,16 @@ export const useActiveTimer = () => {
     },
     refetchInterval: (query) => {
       // No active timer - don't poll
-      if (!query.state.data) return 0;
+      if (!query.state.data) return REFRESH_INTERVAL.FOCUSED;
       
       // Page hidden - poll every 15 seconds
-      if (!isVisible) return 15000;
+      if (!isVisible) return REFRESH_INTERVAL.HIDDEN;
       
       // Page visible but not focused - poll every 5 seconds
-      if (!isFocused) return 5000;
+      if (!isFocused) return REFRESH_INTERVAL.NOT_FOCUSED;
       
       // Page visible and focused - poll every second
-      return 1000;
+      return 60000;
     },
   });
 
