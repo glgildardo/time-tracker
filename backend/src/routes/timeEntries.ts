@@ -32,8 +32,8 @@ const updateTimeEntrySchema = z.object({
 const getTimeEntriesQuerySchema = z.object({
   projectId: z.string().optional(),
   taskId: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   limit: z.string().transform(Number).default('50'),
   offset: z.string().transform(Number).default('0'),
 });
@@ -342,8 +342,8 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           properties: {
             projectId: { type: 'string'},
             taskId: { type: 'string'},
-            startDate: { type: 'string', format: 'date-time'},
-            endDate: { type: 'string', format: 'date-time'},
+            startDate: { type: 'string', format: 'date'},
+            endDate: { type: 'string', format: 'date'},
             limit: { type: 'string', default: '50'},
             offset: { type: 'string', default: '0'},
           },

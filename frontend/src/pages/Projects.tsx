@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, MoreVertical, Clock, Pencil, Trash2 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { useTimeEntries } from "@/hooks/useTimeEntries"
-import { calculateProjectHours } from "@/lib/utils"
+import { calculateProjectHours, formatDurationHuman } from "@/lib/utils"
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog"
 import { EditProjectDialog } from "@/components/projects/EditProjectDialog"
 import { DeleteProjectDialog } from "@/components/projects/DeleteProjectDialog"
@@ -109,7 +109,7 @@ export default function ProjectsPage() {
                     </Badge>
                     <div className="flex items-center gap-1 text-muted-foreground text-sm">
                       <Clock className="h-3 w-3" />
-                      {totalHours.toFixed(1)}h
+                      {formatDurationHuman(totalHours * 3600)}
                     </div>
                   </div>
 
@@ -129,7 +129,7 @@ export default function ProjectsPage() {
                         />
                       </div>
                       <p className="text-muted-foreground text-xs">
-                        {totalHours.toFixed(1)} of {project.budget} hours
+                        {formatDurationHuman(totalHours * 3600)} of {formatDurationHuman(project.budget * 3600)}
                       </p>
                     </div>
                   )}

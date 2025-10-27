@@ -270,6 +270,13 @@ export const createServer = async (): Promise<FastifyInstance> => {
   await server.register(import('./routes/projects'), { prefix: '/api' });
   await server.register(import('./routes/tasks'), { prefix: '/api' });
   await server.register(import('./routes/timeEntries'), { prefix: '/api' });
+  
+  // Register task timer routes
+  const taskTimerRoutes = await import('./routes/taskTimer.routes');
+  await server.register(taskTimerRoutes.default, { prefix: '/api' });
+  
+  const taskStreamRoutes = await import('./routes/taskStream.routes');
+  await server.register(taskStreamRoutes.default, { prefix: '/api' });
 
   // Error handling
   server.setErrorHandler((error, _request, reply) => {

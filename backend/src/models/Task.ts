@@ -7,6 +7,7 @@ export interface ITask extends Document {
   userId: mongoose.Types.ObjectId;
   priority: 'low' | 'medium' | 'high' | 'critical';
   status: 'pending' | 'in-progress' | 'completed';
+  timerStatus: 'idle' | 'running' | 'paused' | 'stopped';
   estimatedHours?: number;
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +51,14 @@ const TaskSchema = new Schema<ITask>(
         message: 'Status must be pending, in-progress, or completed',
       },
       default: 'pending',
+    },
+    timerStatus: {
+      type: String,
+      enum: {
+        values: ['idle', 'running', 'paused', 'stopped'],
+        message: 'Timer status must be idle, running, paused, or stopped',
+      },
+      default: 'idle',
     },
     estimatedHours: {
       type: Number,

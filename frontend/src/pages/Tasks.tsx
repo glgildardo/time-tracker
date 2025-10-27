@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, badgeVariants } from "@/components/ui/badge"
+import type { VariantProps } from "class-variance-authority"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Clock, MoreVertical, Pencil, Trash2, Play, Square, Loader2 } from "lucide-react"
 import { useTasks } from "@/hooks/useTasks"
 import { useProjects } from "@/hooks/useProjects"
 import { useTimeEntries, useActiveTimer, useStopTimer, useStartTimer } from "@/hooks/useTimeEntries"
 import { useUpdateTask } from "@/hooks/useTasks"
-import { calculateTaskHours, groupTasksByProject, formatDateTime, formatDurationSeconds } from "@/lib/utils"
+import { calculateTaskHours, groupTasksByProject, formatDateTime, formatDurationSeconds, formatDurationHuman } from "@/lib/utils"
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog"
 import { EditTaskDialog } from "@/components/tasks/EditTaskDialog"
 import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog"
@@ -20,10 +21,20 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { Task } from "@/types"
 
-const priorityColors: Record<string, "destructive" | "default" | "secondary"> = {
-  high: "destructive",
-  medium: "default",
-  low: "secondary",
+type BadgeVariant = VariantProps<typeof badgeVariants>["variant"]
+
+const statusColors: Record<string, BadgeVariant> = {
+  completed: "success",
+  "in-progress": "info",
+  pending: "secondary",
+}
+
+// Helper function to format status labels
+function formatStatusLabel(status: string): string {
+  return status
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
 
 export default function TasksPage() {
@@ -199,10 +210,10 @@ export default function TasksPage() {
                               {task.name}
                             </h3>
                             <Badge
-                              variant={priorityColors[task.priority] || "default"}
+                              variant={statusColors[task.status]}
                               className="text-xs"
                             >
-                              {task.priority}
+                              {formatStatusLabel(task.status)}
                             </Badge>
                           </div>
                           {task.description && (
@@ -220,8 +231,8 @@ export default function TasksPage() {
                             <div className="text-right">
                               <div className="flex items-center gap-1 text-sm">
                                 <Clock className="h-3 w-3 text-muted-foreground" />
-                                <span className="font-medium">{loggedHours.toFixed(1)}h</span>
-                                <span className="text-muted-foreground">/ {estimatedHours.toFixed(1)}h</span>
+                                <span className="font-medium">{formatDurationHuman(loggedHours * 3600)}</span>
+                                <span className="text-muted-foreground">/ {formatDurationHuman(estimatedHours * 3600)}</span>
                               </div>
                               <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-secondary">
                                 <div

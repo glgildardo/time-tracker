@@ -8,7 +8,7 @@ import {
   useActiveTimer,
   useStopTimer,
 } from "@/hooks/useTimeEntries"
-import { formatDateTime, formatDurationSeconds, formatDurationHours } from "@/lib/utils"
+import { formatDateTime, formatDurationSeconds, formatDurationHuman } from "@/lib/utils"
 import { StartTimerDialog } from "@/components/time-entries/StartTimerDialog"
 import { EditTimeEntryDialog } from "@/components/time-entries/EditTimeEntryDialog"
 import { DeleteTimeEntryDialog } from "@/components/time-entries/DeleteTimeEntryDialog"
@@ -192,7 +192,7 @@ export default function TimeEntriesPage() {
                   <div className="text-right">
                     {entry.duration ? (
                       <p className="font-mono text-lg font-semibold">
-                        {formatDurationHours(entry.duration)}
+                        {formatDurationHuman(entry.duration)}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">Running...</p>

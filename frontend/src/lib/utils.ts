@@ -39,6 +39,32 @@ export function formatDurationHours(seconds: number): string {
 }
 
 /**
+ * Format duration in seconds to human-readable format
+ * Examples: "20 mins", "1 hour 20 mins", "2 hours 30 mins"
+ */
+export function formatDurationHuman(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  const parts: string[] = [];
+  
+  if (hours > 0) {
+    parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
+  }
+  
+  if (minutes > 0) {
+    parts.push(`${minutes} ${minutes === 1 ? 'min' : 'mins'}`);
+  }
+  
+  // If no hours or minutes, show 0 mins
+  if (parts.length === 0) {
+    return '0 mins';
+  }
+  
+  return parts.join(' ');
+}
+
+/**
  * Calculate total hours for a project from time entries
  */
 export function calculateProjectHours(projectId: string, timeEntries: any[]): number {

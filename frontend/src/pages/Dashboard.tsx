@@ -6,7 +6,8 @@ import { useTasks } from "@/hooks/useTasks"
 import { useTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
 import { Button } from "@/components/ui/button"
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, subDays, startOfMonth, endOfMonth } from "date-fns"
-import type { Project, Task, TimeEntry } from "@/hooks/useProjects"
+import { formatDurationHuman } from "@/lib/utils"
+import type { Project, Task, TimeEntry } from "@/types"
 
 // Utility functions for calculations
 const calculateTotalHours = (timeEntries: TimeEntry[]) => {
@@ -268,7 +269,7 @@ export default function DashboardPage() {
                   <div key={project.name} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{project.name}</span>
-                      <span className="text-muted-foreground">{project.hours}h</span>
+                      <span className="text-muted-foreground">{formatDurationHuman(project.hours * 3600)}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                       <div 
@@ -310,7 +311,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-medium">
-                    {entry.duration ? `${(entry.duration / 3600).toFixed(1)}h` : 'Running...'}
+                    {entry.duration ? formatDurationHuman(entry.duration) : 'Running...'}
                   </p>
                   {entry.description && (
                     <p className="text-sm text-muted-foreground">{entry.description}</p>
