@@ -60,7 +60,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             properties: {
               tasks: {
                 type: 'array',
-                items: { $ref: 'Task#' },
+                items: { $ref: 'TaskPopulated#' },
               },
             },
           },
@@ -98,7 +98,8 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
         const tasks = await Task.find(filter)
           .populate('projectId', 'name color')
-          .sort({ createdAt: -1 });
+          .sort({ createdAt: -1 })
+          .lean();
 
         return reply.send({
           tasks,
@@ -139,7 +140,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             type: 'object',
             properties: {
               message: { type: 'string'},
-              task: { $ref: 'Task#' },
+              task: { $ref: 'TaskPopulated#' },
             },
           },
           400: { $ref: 'Error#' },
@@ -205,7 +206,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
         return reply.status(201).send({
           message: 'Task created successfully',
-          task,
+          task: task.toObject(),
         });
       } catch (error) {
         fastify.log.error(error);
@@ -237,7 +238,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           200: {
             type: 'object',
             properties: {
-              task: { $ref: 'Task#' },
+              task: { $ref: 'TaskPopulated#' },
             },
           },
           401: { $ref: 'Error#' },
@@ -253,7 +254,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
         const task = await Task.findOne({
           _id: id,
           userId: request.user.id,
-        }).populate('projectId', 'name color');
+        })
+          .populate('projectId', 'name color')
+          .lean();
 
         if (!task) {
           return reply.status(404).send({
@@ -306,7 +309,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             type: 'object',
             properties: {
               message: { type: 'string'},
-              task: { $ref: 'Task#' },
+              task: { $ref: 'TaskPopulated#' },
             },
           },
           400: { $ref: 'Error#' },
@@ -367,7 +370,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
         return reply.send({
           message: 'Task updated successfully',
-          task,
+          task: task.toObject(),
         });
       } catch (error) {
         fastify.log.error(error);

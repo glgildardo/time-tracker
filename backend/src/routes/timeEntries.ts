@@ -61,7 +61,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             type: 'object',
             properties: {
               message: { type: 'string'},
-              timeEntry: { $ref: 'TimeEntry#' },
+              timeEntry: { $ref: 'TimeEntryPopulated#' },
             },
           },
           400: { $ref: 'Error#' },
@@ -124,7 +124,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
         return reply.status(201).send({
           message: 'Timer started successfully',
-          timeEntry,
+          timeEntry: timeEntry.toObject(),
         });
       } catch (error) {
         fastify.log.error(error);
@@ -156,7 +156,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             type: 'object',
             properties: {
               message: { type: 'string'},
-              timeEntry: { $ref: 'TimeEntry#' },
+              timeEntry: { $ref: 'TimeEntryPopulated#' },
             },
           },
           400: { $ref: 'Error#' },
@@ -204,7 +204,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
         return reply.send({
           message: 'Timer stopped successfully',
-          timeEntry: activeTimer,
+          timeEntry: activeTimer.toObject(),
         });
       } catch (error) {
         fastify.log.error(error);
@@ -354,7 +354,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             properties: {
               timeEntries: {
                 type: 'array',
-                items: { $ref: 'TimeEntry#' },
+                items: { $ref: 'TimeEntryPopulated#' },
               },
               total: { type: 'number'},
               limit: { type: 'number'},
@@ -426,7 +426,8 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           .populate('taskId', 'name projectId')
           .sort({ startTime: -1 })
           .limit(limit)
-          .skip(offset);
+          .skip(offset)
+          .lean();
 
         return reply.send({
           timeEntries,
@@ -473,7 +474,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             type: 'object',
             properties: {
               message: { type: 'string'},
-              timeEntry: { $ref: 'TimeEntry#' },
+              timeEntry: { $ref: 'TimeEntryPopulated#' },
             },
           },
           400: { $ref: 'Error#' },
@@ -538,7 +539,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
 
         return reply.send({
           message: 'Time entry updated successfully',
-          timeEntry,
+          timeEntry: timeEntry.toObject(),
         });
       } catch (error) {
         fastify.log.error(error);

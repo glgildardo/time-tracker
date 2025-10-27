@@ -7,6 +7,8 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { config } from './config/environment';
 import { database } from './config/database';
+import { registerTaskSchemas } from './schemas/task.schema';
+import { registerTimeEntrySchemas } from './schemas/timeEntry.schema';
 
 export const createServer = async (): Promise<FastifyInstance> => {
   const server = Fastify({
@@ -106,6 +108,10 @@ export const createServer = async (): Promise<FastifyInstance> => {
       updatedAt: { type: 'string', format: 'date-time' },
     },
   });
+
+  // Register populated schemas for Mongoose populated fields
+  await registerTaskSchemas(server);
+  await registerTimeEntrySchemas(server);
 
   // Swagger configuration
   await server.register(swagger, {
