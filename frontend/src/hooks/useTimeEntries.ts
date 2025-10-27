@@ -67,14 +67,14 @@ export const useActiveTimer = () => {
       // No active timer - don't poll
       if (!query.state.data) return REFRESH_INTERVAL.FOCUSED;
       
-      // Page hidden - poll every 15 seconds
+      // Page hidden - poll every 3 minutes
       if (!isVisible) return REFRESH_INTERVAL.HIDDEN;
       
-      // Page visible but not focused - poll every 5 seconds
+      // Page visible but not focused - poll every 2 minutes
       if (!isFocused) return REFRESH_INTERVAL.NOT_FOCUSED;
       
-      // Page visible and focused - poll every second
-      return 60000;
+      // Page visible and focused - poll every 30 seconds
+      return 30000;
     },
   });
 
