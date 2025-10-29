@@ -102,45 +102,45 @@ class TimeEntriesController {
 
     // Build a plain serializable object that only includes defined fields
     const serialized: Record<string, unknown> = {
-      _id: String((activeTimer as any)._id),
-      userId: String((activeTimer as any).userId),
-      startTime: (activeTimer as any).startTime instanceof Date
-        ? (activeTimer as any).startTime.toISOString()
-        : String((activeTimer as any).startTime),
-      status: (activeTimer as any).status,
-      createdAt: (activeTimer as any).createdAt instanceof Date
-        ? (activeTimer as any).createdAt.toISOString()
-        : String((activeTimer as any).createdAt),
-      updatedAt: (activeTimer as any).updatedAt instanceof Date
-        ? (activeTimer as any).updatedAt.toISOString()
-        : String((activeTimer as any).updatedAt),
+      _id: String(activeTimer._id),
+      userId: String(activeTimer.userId),
+      startTime: activeTimer.startTime instanceof Date
+        ? activeTimer.startTime.toISOString()
+        : String(activeTimer.startTime),
+      status: activeTimer.status,
+      createdAt: activeTimer.createdAt instanceof Date
+        ? activeTimer.createdAt.toISOString()
+        : String(activeTimer.createdAt),
+      updatedAt: activeTimer.updatedAt instanceof Date
+        ? activeTimer.updatedAt.toISOString()
+        : String(activeTimer.updatedAt),
     };
 
     // taskId can be string or populated object
     const tId = (activeTimer as any).taskId;
     if (tId && typeof tId === 'object' && ('_id' in tId || 'name' in tId)) {
-      const projectId = (tId as any).projectId;
-      (serialized as any).taskId = {
-        _id: String((tId as any)._id ?? ''),
-        name: (tId as any).name,
+      const projectId = tId.projectId;
+      serialized['taskId'] = {
+        _id: String(tId._id ?? ''),
+        name: tId.name,
         projectId: projectId && typeof projectId === 'object' && '_id' in projectId
-          ? String((projectId as any)._id)
+          ? String(projectId._id)
           : (projectId != null ? String(projectId) : undefined),
       };
     } else if (tId != null) {
-      (serialized as any).taskId = String(tId);
+      serialized['taskId'] = String(tId);
     }
 
-    if ((activeTimer as any).endTime) {
-      (serialized as any).endTime = (activeTimer as any).endTime instanceof Date
-        ? (activeTimer as any).endTime.toISOString()
-        : String((activeTimer as any).endTime);
+    if (activeTimer.endTime) {
+      serialized['endTime'] = activeTimer.endTime instanceof Date
+        ? activeTimer.endTime.toISOString()
+        : String(activeTimer.endTime);
     }
-    if (typeof (activeTimer as any).duration === 'number') {
-      (serialized as any).duration = (activeTimer as any).duration;
+    if (typeof activeTimer.duration === 'number') {
+      serialized['duration'] = activeTimer.duration;
     }
-    if ((activeTimer as any).description) {
-      (serialized as any).description = (activeTimer as any).description;
+    if (activeTimer.description) {
+      serialized['description'] = activeTimer.description;
     }
 
     return { timeEntry: serialized };

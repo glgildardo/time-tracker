@@ -93,12 +93,18 @@ export default function TimeEntriesPage() {
               </div>
               <div>
                 <h3 className="font-semibold">
-                  {typeof activeTimer.taskId === "object"
+                  {typeof activeTimer.taskId === "object" && activeTimer.taskId.name
                     ? activeTimer.taskId.name
                     : "Task"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Active timer
+                  {formatDateTime(activeTimer.startTime, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>
