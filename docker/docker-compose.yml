@@ -1,9 +1,10 @@
 version: '3.8'
 
 services:
+  # MongoDB service - can be commented out if using Atlas
   mongodb:
     image: mongo:7
-    container_name: time-tracker-mongodb
+    container_name: time-tracker-mongodb-dev
     restart: unless-stopped
     ports:
       - "27017:27017"
@@ -24,13 +25,18 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
-      MONGODB_URI: mongodb://admin:password@mongodb:27017/time-tracker?authSource=admin
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
-      JWT_EXPIRES_IN: 7d
-      PORT: 3001
-      FRONTEND_URL: http://localhost:5173
+      # MONGODB_URI can be set in .env file to use Atlas or local MongoDB
+      # Default to local MongoDB if not set in .env
+      MONGODB_URI: ${MONGODB_URI:-mongodb://admin:password@mongodb:27017/time-tracker?authSource=admin}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: ${PORT:-3001}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    # If using Atlas, comment out the mongodb service above and remove this depends_on line
     depends_on:
       - mongodb
     networks:
