@@ -4,7 +4,7 @@ import { TimeEntry } from '../models/TimeEntry';
 import { Task } from '../models/Task';
 import { authenticateToken } from '../middleware/auth';
 import { timeEntriesController } from '../controllers/timeEntries.controller';
-import { NotFoundError } from '../utils/errorHandler';
+import { NotFoundError, ValidationError } from '../utils/errorHandler';
 
 // Validation schemas
 const startTimerSchema = z.object({
@@ -39,6 +39,10 @@ const getTimeEntriesQuerySchema = z.object({
   limit: z.string().transform(Number).default('50'),
   offset: z.string().transform(Number).default('0'),
   orderDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+});
+
+const weeklySummaryQuerySchema = z.object({
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export default async (fastify: FastifyInstance): Promise<void> => {
@@ -589,6 +593,188 @@ export default async (fastify: FastifyInstance): Promise<void> => {
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to delete time entry',
+        });
+      }
+    }
+  );
+
+  // Get weekly summary
+  fastify.get(
+    '/time-entries/weekly-summary',
+    {
+      preHandler: authenticateToken,
+      schema: {
+        description: 'Get weekly summary of time entries grouped by task',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            weekStart: { type: 'string', format: 'date', description: 'Week start date (YYYY-MM-DD). Defaults to current week.' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              weekStart: { type: 'string', format: 'date-time' },
+              weekEnd: { type: 'string', format: 'date-time' },
+              taskSummaries: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    taskId: { type: 'string' },
+                    taskName: { type: 'string' },
+                    projectId: { type: 'string' },
+                    projectName: { type: 'string' },
+                    totalHours: { type: 'number' },
+                    totalSeconds: { type: 'number' },
+                    entryCount: { type: 'number' },
+                  },
+                },
+              },
+              totalHours: { type: 'number' },
+              totalEntries: { type: 'number' },
+            },
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply) => {
+      try {
+        // Validate query parameters
+        const validationResult = weeklySummaryQuerySchema.safeParse(request.query);
+        if (!validationResult.success) {
+          return reply.status(400).send({
+            error: 'Validation Error',
+            message: 'Invalid query parameters',
+            details: validationResult.error.errors,
+          });
+        }
+
+        const { weekStart } = validationResult.data;
+        const result = await timeEntriesController.getWeeklySummary(request.user.id, weekStart);
+
+        return reply.send(result);
+      } catch (error: unknown) {
+        fastify.log.error(error);
+        
+        if (error instanceof ValidationError) {
+          return reply.status(400).send({
+            error: 'Validation Error',
+            message: error.message,
+          });
+        }
+
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: 'Failed to fetch weekly summary',
+        });
+      }
+    }
+  );
+
+  // Export weekly summary as CSV
+  fastify.get(
+    '/time-entries/weekly-summary/csv',
+    {
+      preHandler: authenticateToken,
+      schema: {
+        description: 'Export weekly summary as CSV file',
+        tags: ['Time Entries'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            weekStart: { type: 'string', format: 'date', description: 'Week start date (YYYY-MM-DD). Defaults to current week.' },
+          },
+        },
+        response: {
+          200: {
+            type: 'string',
+            contentEncoding: 'binary',
+            contentMediaType: 'text/csv',
+          },
+          400: { $ref: 'Error#' },
+          401: { $ref: 'Error#' },
+          500: { $ref: 'Error#' },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply) => {
+      try {
+        // Validate query parameters
+        const validationResult = weeklySummaryQuerySchema.safeParse(request.query);
+        if (!validationResult.success) {
+          return reply.status(400).send({
+            error: 'Validation Error',
+            message: 'Invalid query parameters',
+            details: validationResult.error.errors,
+          });
+        }
+
+        const { weekStart } = validationResult.data;
+        const entries = await timeEntriesController.getWeeklySummaryEntries(request.user.id, weekStart);
+
+        // Generate CSV content
+        const headers = ['Task Name', 'Project Name', 'Date', 'Start Time', 'End Time', 'Duration (hours)', 'Description'];
+        const csvRows = [
+          headers.join(','),
+          ...entries.map((entry) => {
+            // Escape commas and quotes in CSV values
+            const escapeCsv = (value: string) => {
+              if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                return `"${value.replace(/"/g, '""')}"`;
+              }
+              return value;
+            };
+            
+            return [
+              escapeCsv(entry.taskName),
+              escapeCsv(entry.projectName),
+              entry.date,
+              entry.startTime,
+              entry.endTime,
+              entry.durationHours,
+              escapeCsv(entry.description),
+            ].join(',');
+          }),
+        ];
+
+        const csvContent = csvRows.join('\n');
+
+        // Generate filename with week range
+        const weekStartDate = weekStart ? new Date(weekStart) : new Date();
+        const dayOfWeek = weekStartDate.getDay();
+        const daysToSubtract = dayOfWeek;
+        const actualWeekStart = new Date(weekStartDate);
+        actualWeekStart.setDate(weekStartDate.getDate() - daysToSubtract);
+        const weekEndDate = new Date(actualWeekStart);
+        weekEndDate.setDate(actualWeekStart.getDate() + 6);
+        
+        const filename = `weekly-summary-${actualWeekStart.toISOString().split('T')[0]}-to-${weekEndDate.toISOString().split('T')[0]}.csv`;
+
+        reply
+          .header('Content-Type', 'text/csv')
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .send(csvContent);
+      } catch (error: unknown) {
+        fastify.log.error(error);
+        
+        if (error instanceof ValidationError) {
+          return reply.status(400).send({
+            error: 'Validation Error',
+            message: error.message,
+          });
+        }
+
+        return reply.status(500).send({
+          error: 'Internal Server Error',
+          message: 'Failed to generate CSV export',
         });
       }
     }

@@ -5,3 +5,4 @@ export * from './project.types';
 export * from './task.types';
 export * from './taskTimer.types';
 export * from './timeEntry.types';
+export * from './weeklySummary.types';

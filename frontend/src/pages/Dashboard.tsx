@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock, FolderKanban, CheckSquare, TrendingUp, Pause } from "lucide-react"
+import { Clock, FolderKanban, CheckSquare, TrendingUp, Pause, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 import { useProjects } from "@/hooks/useProjects"
 import { useTasks } from "@/hooks/useTasks"
 import { useTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
+import { useWeeklySummary, useDownloadWeeklySummaryCSV } from "@/hooks/useWeeklySummary"
 import { Button } from "@/components/ui/button"
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, subDays, startOfMonth, endOfMonth } from "date-fns"
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, subDays, startOfMonth, endOfMonth, addWeeks, subWeeks } from "date-fns"
 import { formatDurationHuman } from "@/lib/utils"
 import type { Project, Task, TimeEntry } from "@/types"
+import { useState } from "react"
 
 // Utility functions for calculations
 const calculateTotalHours = (timeEntries: TimeEntry[]) => {
@@ -104,6 +106,9 @@ const calculateProductivityChange = (timeEntries: TimeEntry[]) => {
 };
 
 export default function DashboardPage() {
+  // Weekly summary state
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string | undefined>(undefined);
+  
   // Fetch data
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
@@ -112,9 +117,34 @@ export default function DashboardPage() {
     endDate: format(new Date(), 'yyyy-MM-dd')
   });
   const { data: activeTimer } = useActiveTimer();
+  const { data: weeklySummary, isLoading: weeklySummaryLoading } = useWeeklySummary(selectedWeekStart);
+  const downloadCSV = useDownloadWeeklySummaryCSV();
   
   const timeEntries = timeEntriesData?.timeEntries || [];
   const stopTimer = useStopTimer();
+
+  // Week navigation handlers
+  const handlePreviousWeek = () => {
+    if (!weeklySummary) return;
+    const currentWeekStart = new Date(weeklySummary.weekStart);
+    const newWeekStart = subWeeks(currentWeekStart, 1);
+    setSelectedWeekStart(format(startOfWeek(newWeekStart), 'yyyy-MM-dd'));
+  };
+
+  const handleNextWeek = () => {
+    if (!weeklySummary) return;
+    const currentWeekStart = new Date(weeklySummary.weekStart);
+    const newWeekStart = addWeeks(currentWeekStart, 1);
+    setSelectedWeekStart(format(startOfWeek(newWeekStart), 'yyyy-MM-dd'));
+  };
+
+  const handleCurrentWeek = () => {
+    setSelectedWeekStart(undefined);
+  };
+
+  const handleDownloadCSV = () => {
+    downloadCSV.mutate(selectedWeekStart);
+  };
 
   // Calculate stats
   const totalHours = calculateTotalHours(timeEntries);
@@ -233,6 +263,103 @@ export default function DashboardPage() {
           )
         })}
       </div>
+
+      {/* Weekly Summary Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Weekly Summary</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousWeek}
+                disabled={weeklySummaryLoading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCurrentWeek}
+                disabled={weeklySummaryLoading || !selectedWeekStart}
+              >
+                Current Week
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextWeek}
+                disabled={weeklySummaryLoading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadCSV}
+                disabled={weeklySummaryLoading || downloadCSV.isPending || !weeklySummary || weeklySummary.totalEntries === 0}
+              >
+                {downloadCSV.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          {weeklySummary && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {format(new Date(weeklySummary.weekStart), 'MMM d')} - {format(new Date(weeklySummary.weekEnd), 'MMM d, yyyy')}
+              {' • '}
+              Total: {weeklySummary.totalHours.toFixed(2)} hours ({weeklySummary.totalEntries} entries)
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          {weeklySummaryLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : weeklySummary && weeklySummary.taskSummaries.length > 0 ? (
+            <div className="space-y-3">
+              {weeklySummary.taskSummaries.map((task) => (
+                <div key={task.taskId} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{task.taskName}</p>
+                      {task.projectName && (
+                        <span className="text-xs text-muted-foreground">({task.projectName})</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {task.entryCount} {task.entryCount === 1 ? 'entry' : 'entries'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-lg font-semibold">
+                      {task.totalHours.toFixed(2)}h
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDurationHuman(task.totalSeconds)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No time entries for this week</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

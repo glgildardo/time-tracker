@@ -1,6 +1,7 @@
 import { TimeEntry } from '../models/TimeEntry';
 import { Task } from '../models/Task';
 import { ValidationError, NotFoundError, BadRequestError } from '../utils/errorHandler';
+import { getWeeklySummary, getWeeklySummaryEntries } from '../services/weeklySummary.service';
 
 interface StartTimerData {
   taskId: string;
@@ -251,6 +252,50 @@ class TimeEntriesController {
     return {
       message: 'Time entry deleted successfully',
     };
+  }
+
+  async getWeeklySummary(userId: string, weekStart?: string) {
+    // Validate weekStart format if provided (YYYY-MM-DD)
+    if (weekStart) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(weekStart)) {
+        throw new ValidationError('Invalid weekStart format. Expected YYYY-MM-DD');
+      }
+      
+      // Validate that it's a valid date
+      const date = new Date(weekStart);
+      if (isNaN(date.getTime())) {
+        throw new ValidationError('Invalid date provided for weekStart');
+      }
+    }
+
+    const summary = await getWeeklySummary(userId, weekStart);
+    
+    return {
+      weekStart: summary.weekStart.toISOString(),
+      weekEnd: summary.weekEnd.toISOString(),
+      taskSummaries: summary.taskSummaries,
+      totalHours: Math.round(summary.totalHours * 100) / 100, // Round to 2 decimal places
+      totalEntries: summary.totalEntries,
+    };
+  }
+
+  async getWeeklySummaryEntries(userId: string, weekStart?: string) {
+    // Validate weekStart format if provided (YYYY-MM-DD)
+    if (weekStart) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(weekStart)) {
+        throw new ValidationError('Invalid weekStart format. Expected YYYY-MM-DD');
+      }
+      
+      // Validate that it's a valid date
+      const date = new Date(weekStart);
+      if (isNaN(date.getTime())) {
+        throw new ValidationError('Invalid date provided for weekStart');
+      }
+    }
+
+    return await getWeeklySummaryEntries(userId, weekStart);
   }
 }
 
