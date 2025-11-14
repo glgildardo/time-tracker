@@ -24,6 +24,7 @@ interface GetTimeEntriesQuery {
   endDate?: string;
   limit?: number;
   offset?: number;
+  orderDirection?: 'asc' | 'desc';
 }
 
 class TimeEntriesController {
@@ -117,6 +118,7 @@ class TimeEntriesController {
     };
 
     // taskId can be string or populated object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tId = (activeTimer as any).taskId;
     if (tId && typeof tId === 'object' && ('_id' in tId || 'name' in tId)) {
       const projectId = tId.projectId;
@@ -147,7 +149,15 @@ class TimeEntriesController {
   }
 
   async getTimeEntries(userId: string, query: GetTimeEntriesQuery) {
-    const { projectId, taskId, startDate, endDate, limit = 50, offset = 0 } = query;
+    const { 
+      projectId, 
+      taskId, 
+      startDate, 
+      endDate, 
+      limit = 50, 
+      offset = 0,
+      orderDirection = 'desc'
+    } = query;
 
     const filter: {
       userId: string;
@@ -183,9 +193,12 @@ class TimeEntriesController {
     }
 
     const total = await TimeEntry.countDocuments(filter);
+    const sortDirection = orderDirection === 'asc' ? 1 : -1;
+
+    // Sort by date (startTime)
     const timeEntries = await TimeEntry.find(filter)
       .populate('taskId', 'name projectId')
-      .sort({ startTime: -1 })
+      .sort({ startTime: sortDirection })
       .limit(limit)
       .skip(offset)
       .lean();

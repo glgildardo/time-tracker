@@ -2,13 +2,13 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Play, Square, MoreVertical, Loader2 } from "lucide-react"
+import { Plus, Play, Square, MoreVertical, Loader2, ArrowUp, ArrowDown } from "lucide-react"
 import { useTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
 import { formatDateTime, formatDurationSeconds, formatDurationHuman } from "@/lib/utils"
 import { StartTimerDialog } from "@/components/time-entries/StartTimerDialog"
 import { EditTimeEntryDialog } from "@/components/time-entries/EditTimeEntryDialog"
 import { DeleteTimeEntryDialog } from "@/components/time-entries/DeleteTimeEntryDialog"
-import type { TimeEntry } from "@/types"
+import type { TimeEntry, TimeEntriesFilters } from "@/types"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +22,11 @@ export default function TimeEntriesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null)
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00")
+  const [filters, setFilters] = useState<TimeEntriesFilters>({
+    orderDirection: 'desc',
+  })
 
-  const { data: timeEntriesData, isLoading: entriesLoading } = useTimeEntries()
+  const { data: timeEntriesData, isLoading: entriesLoading } = useTimeEntries(filters)
   const { data: activeTimer, isLoading: activeLoading } = useActiveTimer()
   const stopTimer = useStopTimer()
 
@@ -64,6 +67,13 @@ export default function TimeEntriesPage() {
 
   const timeEntries = timeEntriesData?.timeEntries || []
 
+  const toggleSortDirection = () => {
+    setFilters((prev) => ({
+      ...prev,
+      orderDirection: prev.orderDirection === 'asc' ? 'desc' : 'asc',
+    }))
+  }
+
   return (
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
@@ -71,10 +81,24 @@ export default function TimeEntriesPage() {
           <h1 className="text-3xl font-bold text-balance">Time Entries</h1>
           <p className="text-muted-foreground">Track and manage your time logs.</p>
         </div>
-        <Button onClick={() => setStartDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Entry
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={toggleSortDirection}
+            className="flex items-center gap-2"
+          >
+            {filters.orderDirection === 'asc' ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : (
+              <ArrowDown className="h-4 w-4" />
+            )}
+            Sort by Date
+          </Button>
+          <Button onClick={() => setStartDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Entry
+          </Button>
+        </div>
       </div>
 
       {/* Active Timer Card */}

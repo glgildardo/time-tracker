@@ -32,9 +32,17 @@ export function EditTimeEntryDialog({
 
   useEffect(() => {
     if (timeEntry) {
-      // Convert ISO date strings to datetime-local format
+      // Convert ISO date strings (UTC) to datetime-local format (local timezone)
       const formatForInput = (dateString: string) => {
-        return new Date(dateString).toISOString().slice(0, 16)
+        const date = new Date(dateString)
+        // Get local date components
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
+        // Format as YYYY-MM-DDTHH:mm (datetime-local format)
+        return `${year}-${month}-${day}T${hours}:${minutes}`
       }
 
       setStartTime(formatForInput(timeEntry.startTime))
@@ -47,11 +55,21 @@ export function EditTimeEntryDialog({
     e.preventDefault()
     if (!timeEntry) return
 
+    // Convert datetime-local values (local timezone) to ISO strings (UTC)
+    const convertToISO = (localDateTime: string) => {
+      if (!localDateTime) return undefined
+      // datetime-local format is YYYY-MM-DDTHH:mm in local timezone
+      // Create a Date object from the local datetime string
+      const date = new Date(localDateTime)
+      // Return as ISO string (UTC)
+      return date.toISOString()
+    }
+
     await updateTimeEntry.mutateAsync({
       id: timeEntry._id,
       data: {
-        startTime: startTime ? new Date(startTime).toISOString() : undefined,
-        endTime: endTime ? new Date(endTime).toISOString() : undefined,
+        startTime: convertToISO(startTime),
+        endTime: convertToISO(endTime),
         description: description || undefined,
       },
     })

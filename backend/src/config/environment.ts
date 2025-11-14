@@ -9,7 +9,7 @@ const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
-  RATE_LIMIT_MAX: z.string().transform(Number).default('100'),
+  RATE_LIMIT_MAX: z.string().transform(Number).default('300'),
   RATE_LIMIT_TIME_WINDOW: z.string().transform(Number).default('900000'),
 });
 

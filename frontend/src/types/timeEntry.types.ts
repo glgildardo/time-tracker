@@ -37,6 +37,7 @@ export interface TimeEntriesFilters {
   endDate?: string;
   limit?: number;
   offset?: number;
+  orderDirection?: 'asc' | 'desc';
 }
 
 // Time Entry response types

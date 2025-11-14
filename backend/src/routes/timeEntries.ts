@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { TimeEntry } from '../models/TimeEntry';
 import { Task } from '../models/Task';
 import { authenticateToken } from '../middleware/auth';
+import { timeEntriesController } from '../controllers/timeEntries.controller';
+import { NotFoundError } from '../utils/errorHandler';
 
 // Validation schemas
 const startTimerSchema = z.object({
@@ -36,6 +38,7 @@ const getTimeEntriesQuerySchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   limit: z.string().transform(Number).default('50'),
   offset: z.string().transform(Number).default('0'),
+  orderDirection: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
 export default async (fastify: FastifyInstance): Promise<void> => {
@@ -346,6 +349,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             endDate: { type: 'string', format: 'date'},
             limit: { type: 'string', default: '50'},
             offset: { type: 'string', default: '0'},
+            orderDirection: { type: 'string', enum: ['asc', 'desc'], default: 'desc'},
           },
         },
         response: {
@@ -369,74 +373,52 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     },
     async (request: FastifyRequest, reply) => {
       try {
-        const { projectId, taskId, startDate, endDate, limit, offset } =
-          request.query as z.infer<typeof getTimeEntriesQuerySchema>;
-
-        const filter: {
-          userId: string;
-          taskId?: string | { $in: string[] };
-          startTime?: { $gte?: Date; $lte?: Date };
-        } = { userId: request.user.id };
-
-        // Add task filter
-        if (taskId) {
-          const task = await Task.findOne({
-            _id: taskId,
-            userId: request.user.id,
+        // Validate query parameters
+        const validationResult = getTimeEntriesQuerySchema.safeParse(request.query);
+        if (!validationResult.success) {
+          return reply.status(400).send({
+            error: 'Validation Error',
+            message: 'Invalid query parameters',
+            details: validationResult.error.errors,
           });
-
-          if (!task) {
-            return reply.status(404).send({
-              error: 'Task not found',
-              message: 'Task does not exist or you do not have access to it',
-            });
-          }
-
-          filter.taskId = taskId;
-        } else if (projectId) {
-          // Filter by project - get all tasks in the project
-          const tasks = await Task.find({
-            projectId,
-            userId: request.user.id,
-          });
-
-          if (tasks.length === 0) {
-            return reply.send({
-              timeEntries: [],
-              total: 0,
-            });
-          }
-
-          filter.taskId = { $in: tasks.map(task => (task._id as string).toString()) };
         }
 
-        // Add date filters
-        if (startDate || endDate) {
-          filter.startTime = {};
-          if (startDate) {
-            filter.startTime.$gte = new Date(startDate);
-          }
-          if (endDate) {
-            filter.startTime.$lte = new Date(endDate);
-          }
-        }
+        const { projectId, taskId, startDate, endDate, limit, offset, orderDirection } =
+          validationResult.data;
 
-        const total = await TimeEntry.countDocuments(filter);
-        const timeEntries = await TimeEntry.find(filter)
-          .populate('taskId', 'name projectId')
-          .sort({ startTime: -1 })
-          .limit(limit)
-          .skip(offset)
-          .lean();
-
-        return reply.send({
-          timeEntries,
-          total,
+        const query: {
+          projectId?: string;
+          taskId?: string;
+          startDate?: string;
+          endDate?: string;
+          limit: number;
+          offset: number;
+          orderDirection: 'asc' | 'desc';
+        } = {
           limit,
           offset,
-        });
-      } catch (error) {
+          orderDirection,
+        };
+
+        if (projectId) query.projectId = projectId;
+        if (taskId) query.taskId = taskId;
+        if (startDate) query.startDate = startDate;
+        if (endDate) query.endDate = endDate;
+
+        const result = await timeEntriesController.getTimeEntries(request.user.id, query);
+
+        return reply.send(result);
+      } catch (error: unknown) {
         fastify.log.error(error);
+        
+        // Handle known errors
+        if (error instanceof NotFoundError) {
+          return reply.status(404).send({
+            error: 'Not Found',
+            message: error.message,
+          });
+        }
+
         return reply.status(500).send({
           error: 'Internal Server Error',
           message: 'Failed to fetch time entries',
