@@ -1,16 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react"
 import { useWeeklySummary } from "@/hooks/useWeeklySummary"
 import { format, startOfWeek, subWeeks, addWeeks } from "date-fns"
 import type { TaskSummary } from "@/types"
 import { useState } from "react"
+import { useSearchParams } from "react-router-dom"
 
 export default function ReportsPage() {
-  // Initialize with previous week's start date
-  const [selectedWeekStart, setSelectedWeekStart] = useState<string | undefined>(
-    format(subWeeks(startOfWeek(new Date()), 1), 'yyyy-MM-dd')
-  )
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [copied, setCopied] = useState(false)
+
+  // Get weekStart from query params, default to undefined (current week)
+  const weekStartParam = searchParams.get('weekStart')
+  const selectedWeekStart = weekStartParam || undefined
+
+  // Update URL when week changes
+  const updateWeekInUrl = (weekStart: string | undefined) => {
+    const newParams = new URLSearchParams(searchParams)
+    if (weekStart) {
+      newParams.set('weekStart', weekStart)
+    } else {
+      newParams.delete('weekStart')
+    }
+    setSearchParams(newParams, { replace: true })
+  }
 
   const { data: weeklySummary, isLoading } = useWeeklySummary(selectedWeekStart)
 
@@ -38,18 +52,18 @@ export default function ReportsPage() {
     if (!weeklySummary) return;
     const currentWeekStart = new Date(weeklySummary.weekStart);
     const newWeekStart = subWeeks(currentWeekStart, 1);
-    setSelectedWeekStart(format(startOfWeek(newWeekStart), 'yyyy-MM-dd'));
+    updateWeekInUrl(format(startOfWeek(newWeekStart), 'yyyy-MM-dd'));
   };
 
   const handleNextWeek = () => {
     if (!weeklySummary) return;
     const currentWeekStart = new Date(weeklySummary.weekStart);
     const newWeekStart = addWeeks(currentWeekStart, 1);
-    setSelectedWeekStart(format(startOfWeek(newWeekStart), 'yyyy-MM-dd'));
+    updateWeekInUrl(format(startOfWeek(newWeekStart), 'yyyy-MM-dd'));
   };
 
   const handleCurrentWeek = () => {
-    setSelectedWeekStart(undefined);
+    updateWeekInUrl(undefined);
   };
 
   // Format the week range for display
@@ -68,6 +82,38 @@ export default function ReportsPage() {
     ? 'What was done last week'
     : 'What was done that week'
 
+  // Format text for clipboard
+  const formatTextForClipboard = () => {
+    if (!weeklySummary || projectGroups.length === 0) {
+      return '';
+    }
+
+    let text = `${titleText}:\n\n`;
+    
+    projectGroups.forEach((group) => {
+      text += `${group.projectName}:\n`;
+      group.tasks.forEach((task) => {
+        text += `- ${task}\n`;
+      });
+      text += '\n';
+    });
+
+    return text.trim();
+  };
+
+  const handleCopy = async () => {
+    const textToCopy = formatTextForClipboard();
+    if (!textToCopy) return;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -80,6 +126,24 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between">
             <CardTitle>{titleText}</CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                disabled={isLoading || projectGroups.length === 0}
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </>
+                )}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
