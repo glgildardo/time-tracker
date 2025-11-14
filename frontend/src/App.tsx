@@ -11,6 +11,7 @@ import ProjectsPage from '@/pages/Projects';
 import TasksPage from '@/pages/Tasks';
 import TimeEntriesPage from '@/pages/TimeEntries';
 import DashboardPage from '@/pages/Dashboard';
+import ReportsPage from '@/pages/Reports';
 
 function App() {
   return (
@@ -74,6 +75,16 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <TimeEntriesPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <ReportsPage />
                     </Layout>
                   </ProtectedRoute>
                 }

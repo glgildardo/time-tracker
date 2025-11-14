@@ -11,7 +11,8 @@ import {
   LogOut, 
   User,
   Menu,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FolderOpen },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Time Entries', href: '/time-entries', icon: Clock },
+  { name: 'Reports', href: '/reports', icon: FileText },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
