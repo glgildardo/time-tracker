@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, FolderKanban, CheckSquare, TrendingUp, Pause, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 import { useProjects } from "@/hooks/useProjects"
-import { useTasks } from "@/hooks/useTasks"
 import { useTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
 import { useWeeklySummary, useDownloadWeeklySummaryCSV } from "@/hooks/useWeeklySummary"
 import { Button } from "@/components/ui/button"
@@ -111,7 +110,6 @@ export default function DashboardPage() {
   
   // Fetch data
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
-  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
   const { data: timeEntriesData, isLoading: timeEntriesLoading } = useTimeEntries({
     startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
@@ -149,9 +147,10 @@ export default function DashboardPage() {
   // Calculate stats
   const totalHours = calculateTotalHours(timeEntries);
   const activeProjects = projects.filter((project: Project) => 
-    tasks.some((task: Task) => task.projectId === project._id)
+    project.status === 'active'
   ).length;
-  const completedTasks = tasks.length; // For now, we'll show total tasks
+  // Count tasks from the selected week's weekly summary
+  const completedTasks = weeklySummary?.taskSummaries?.length || 0;
   const productivityChange = calculateProductivityChange(timeEntries);
   
   const weeklyData = calculateWeeklyHours(timeEntries);
@@ -174,7 +173,7 @@ export default function DashboardPage() {
       title: "Total Tasks",
       value: completedTasks.toString(),
       icon: CheckSquare,
-      description: "All projects",
+      description: weeklySummary ? `Week of ${format(new Date(weeklySummary.weekStart), 'MMM d')}` : "This week",
     },
     {
       title: "Productivity",
@@ -184,7 +183,7 @@ export default function DashboardPage() {
     },
   ];
 
-  const isLoading = projectsLoading || tasksLoading || timeEntriesLoading;
+  const isLoading = projectsLoading || timeEntriesLoading;
 
   if (isLoading) {
     return (
