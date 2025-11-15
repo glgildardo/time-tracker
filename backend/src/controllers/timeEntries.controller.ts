@@ -2,6 +2,7 @@ import { TimeEntry } from '../models/TimeEntry';
 import { Task } from '../models/Task';
 import { ValidationError, NotFoundError, BadRequestError } from '../utils/errorHandler';
 import { getWeeklySummary, getWeeklySummaryEntries } from '../services/weeklySummary.service';
+import { getDateRangeFromFilter, type DateFilterType } from '../utils/dateFilter';
 
 interface StartTimerData {
   taskId: string;
@@ -23,6 +24,7 @@ interface GetTimeEntriesQuery {
   taskId?: string;
   startDate?: string;
   endDate?: string;
+  dateFilter?: DateFilterType;
   limit?: number;
   offset?: number;
   orderDirection?: 'asc' | 'desc';
@@ -154,7 +156,8 @@ class TimeEntriesController {
       projectId, 
       taskId, 
       startDate, 
-      endDate, 
+      endDate,
+      dateFilter,
       limit = 50, 
       offset = 0,
       orderDirection = 'desc'
@@ -182,14 +185,25 @@ class TimeEntriesController {
       filter.taskId = { $in: tasks.map(task => (task._id as string).toString()) };
     }
 
-    // Add date filters
-    if (startDate || endDate) {
+    // Add date filters - dateFilter takes precedence over startDate/endDate
+    if (dateFilter && dateFilter !== 'all') {
+      const dateRange = getDateRangeFromFilter(dateFilter);
+      if (dateRange) {
+        filter.startTime = {};
+        filter.startTime.$gte = new Date(dateRange.startDate);
+        const endDateObj = new Date(dateRange.endDate);
+        endDateObj.setHours(23, 59, 59, 999);
+        filter.startTime.$lte = endDateObj;
+      }
+    } else if (startDate || endDate) {
       filter.startTime = {};
       if (startDate) {
         filter.startTime.$gte = new Date(startDate);
       }
       if (endDate) {
-        filter.startTime.$lte = new Date(endDate);
+        const endDateObj = new Date(endDate);
+        endDateObj.setHours(23, 59, 59, 999);
+        filter.startTime.$lte = endDateObj;
       }
     }
 

@@ -7,8 +7,9 @@ import { useWeeklySummary, useDownloadWeeklySummaryCSV } from "@/hooks/useWeekly
 import { Button } from "@/components/ui/button"
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, subDays, startOfMonth, endOfMonth, addWeeks, subWeeks } from "date-fns"
 import { formatDurationHuman } from "@/lib/utils"
-import type { Project, Task, TimeEntry } from "@/types"
-import { useState } from "react"
+import { DateFilter } from "@/components/shared/DateFilter"
+import type { Project, Task, TimeEntry, DateFilterType } from "@/types"
+import { useState, useMemo } from "react"
 
 // Utility functions for calculations
 const calculateTotalHours = (timeEntries: TimeEntry[]) => {
@@ -107,18 +108,19 @@ const calculateProductivityChange = (timeEntries: TimeEntry[]) => {
 export default function DashboardPage() {
   // Weekly summary state
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | undefined>(undefined);
+  const [dateFilter, setDateFilter] = useState<DateFilterType>('day');
   
   // Fetch data
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: timeEntriesData, isLoading: timeEntriesLoading } = useTimeEntries({
-    startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd')
+    dateFilter,
+    limit: 5, // Only fetch 5 for recent activity
   });
   const { data: activeTimer } = useActiveTimer();
   const { data: weeklySummary, isLoading: weeklySummaryLoading } = useWeeklySummary(selectedWeekStart);
   const downloadCSV = useDownloadWeeklySummaryCSV();
   
-  const timeEntries = timeEntriesData?.timeEntries || [];
+  const timeEntries = useMemo(() => timeEntriesData?.timeEntries || [], [timeEntriesData?.timeEntries]);
   const stopTimer = useStopTimer();
 
   // Week navigation handlers
@@ -418,11 +420,14 @@ export default function DashboardPage() {
       {/* Recent Activity Section */}
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Activity</CardTitle>
+            <DateFilter value={dateFilter} onChange={setDateFilter} className="w-[140px]" />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {timeEntries.slice(0, 5).map((entry: TimeEntry) => (
+            {timeEntries.map((entry: TimeEntry) => (
               <div key={entry._id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="h-2 w-2 bg-primary rounded-full" />
@@ -446,7 +451,11 @@ export default function DashboardPage() {
               </div>
             ))}
             {timeEntries.length === 0 && (
-              <p className="text-muted-foreground text-center py-8">No recent activity</p>
+              <p className="text-muted-foreground text-center py-8">
+                {dateFilter === 'all'
+                  ? "No recent activity"
+                  : `No activity found for the selected period (${dateFilter === 'day' ? 'Today' : dateFilter === 'week' ? 'This Week' : 'This Month'}).`}
+              </p>
             )}
           </div>
         </CardContent>

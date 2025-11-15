@@ -8,7 +8,8 @@ import { formatDateTime, formatDurationSeconds, formatDurationHuman } from "@/li
 import { StartTimerDialog } from "@/components/time-entries/StartTimerDialog"
 import { EditTimeEntryDialog } from "@/components/time-entries/EditTimeEntryDialog"
 import { DeleteTimeEntryDialog } from "@/components/time-entries/DeleteTimeEntryDialog"
-import type { TimeEntry, TimeEntriesFilters } from "@/types"
+import { DateFilter } from "@/components/shared/DateFilter"
+import type { TimeEntry, TimeEntriesFilters, DateFilterType } from "@/types"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,9 +23,22 @@ export default function TimeEntriesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null)
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00")
+  const [dateFilter, setDateFilter] = useState<DateFilterType>('day')
   const [filters, setFilters] = useState<TimeEntriesFilters>({
     orderDirection: 'desc',
+    dateFilter: 'day',
   })
+
+  // Update filters when date filter changes
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      dateFilter,
+      // Remove startDate/endDate when using dateFilter
+      startDate: undefined,
+      endDate: undefined,
+    }))
+  }, [dateFilter])
 
   const { data: timeEntriesData, isLoading: entriesLoading } = useTimeEntries(filters)
   const { data: activeTimer, isLoading: activeLoading } = useActiveTimer()
@@ -82,6 +96,7 @@ export default function TimeEntriesPage() {
           <p className="text-muted-foreground">Track and manage your time logs.</p>
         </div>
         <div className="flex items-center gap-4">
+          <DateFilter value={dateFilter} onChange={setDateFilter} className="w-[140px]" />
           <Button
             variant="outline"
             onClick={toggleSortDirection}

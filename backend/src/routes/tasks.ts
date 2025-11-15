@@ -35,6 +35,7 @@ const updateTaskSchema = createTaskSchema.partial().omit({ projectId: true });
 
 const getTasksQuerySchema = z.object({
   projectId: z.string().optional(),
+  dateFilter: z.enum(['day', 'week', 'month', 'all']).optional(),
 });
 
 export default async (fastify: FastifyInstance): Promise<void> => {
@@ -51,6 +52,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           type: 'object',
           properties: {
             projectId: { type: 'string'},
+            dateFilter: { type: 'string', enum: ['day', 'week', 'month', 'all']},
           },
         },
         response: {
@@ -71,10 +73,10 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     },
     async (request: FastifyRequest, reply) => {
       try {
-        const { projectId } = request.query as z.infer<
+        const { projectId, dateFilter } = request.query as z.infer<
           typeof getTasksQuerySchema
         >;
-        const result = await tasksController.getAllTasks(request.user.id, projectId);
+        const result = await tasksController.getAllTasks(request.user.id, projectId, dateFilter);
         return reply.send(result);
       } catch (error) {
         fastify.log.error(error);

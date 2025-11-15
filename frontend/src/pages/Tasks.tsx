@@ -19,7 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { Task } from "@/types"
+import { DateFilter } from "@/components/shared/DateFilter"
+import type { Task, DateFilterType } from "@/types"
 
 type BadgeVariant = VariantProps<typeof badgeVariants>["variant"]
 
@@ -43,9 +44,10 @@ export default function TasksPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00")
+  const [dateFilter, setDateFilter] = useState<DateFilterType>('day')
 
-  // Fetch all tasks
-  const { data: allTasks = [], isLoading: tasksLoading } = useTasks()
+  // Fetch tasks with date filter
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks(undefined, dateFilter)
   const { data: projects = [], isLoading: projectsLoading } = useProjects()
   const { data: timeEntriesData } = useTimeEntries()
   const { data: activeTimer, isLoading: activeLoading } = useActiveTimer()
@@ -111,8 +113,6 @@ export default function TasksPage() {
     )
   }
 
-  const groupedTasks = groupTasksByProject(allTasks, projects)
-
   return (
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
@@ -120,10 +120,13 @@ export default function TasksPage() {
           <h1 className="font-bold text-3xl text-balance">Tasks</h1>
           <p className="text-muted-foreground">Organize and track your work items.</p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-4">
+          <DateFilter value={dateFilter} onChange={setDateFilter} className="w-[140px]" />
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       {/* Active Timer Card */}
@@ -171,17 +174,19 @@ export default function TasksPage() {
         </Card>
       ) : null}
 
-      {allTasks.length === 0 ? (
+      {tasks.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          No tasks yet. Create your first task to get started!
+          {dateFilter === 'all'
+            ? "No tasks yet. Create your first task to get started!"
+            : `No tasks found for the selected period (${dateFilter === 'day' ? 'Today' : dateFilter === 'week' ? 'This Week' : 'This Month'}).`}
         </div>
       ) : (
         <div className="space-y-8">
-          {Object.entries(groupedTasks).map(([projectName, tasks]) => (
+          {Object.entries(groupTasksByProject(tasks, projects)).map(([projectName, projectTasks]) => (
             <div key={projectName}>
               <h2 className="mb-4 text-xl font-semibold">{projectName}</h2>
               <div className="space-y-3">
-                {tasks.map((task) => {
+                {projectTasks.map((task) => {
                   const loggedHours = calculateTaskHours(task._id, timeEntries)
                   const estimatedHours = task.estimatedHours || 0
                   const progressPercentage = estimatedHours > 0

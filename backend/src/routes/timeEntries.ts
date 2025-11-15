@@ -36,6 +36,7 @@ const getTimeEntriesQuerySchema = z.object({
   taskId: z.string().optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  dateFilter: z.enum(['day', 'week', 'month', 'all']).optional(),
   limit: z.string().transform(Number).default('50'),
   offset: z.string().transform(Number).default('0'),
   orderDirection: z.enum(['asc', 'desc']).optional().default('desc'),
@@ -351,6 +352,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
             taskId: { type: 'string'},
             startDate: { type: 'string', format: 'date'},
             endDate: { type: 'string', format: 'date'},
+            dateFilter: { type: 'string', enum: ['day', 'week', 'month', 'all']},
             limit: { type: 'string', default: '50'},
             offset: { type: 'string', default: '0'},
             orderDirection: { type: 'string', enum: ['asc', 'desc'], default: 'desc'},
@@ -387,7 +389,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           });
         }
 
-        const { projectId, taskId, startDate, endDate, limit, offset, orderDirection } =
+        const { projectId, taskId, startDate, endDate, dateFilter, limit, offset, orderDirection } =
           validationResult.data;
 
         const query: {
@@ -395,6 +397,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           taskId?: string;
           startDate?: string;
           endDate?: string;
+          dateFilter?: 'day' | 'week' | 'month' | 'all';
           limit: number;
           offset: number;
           orderDirection: 'asc' | 'desc';
@@ -408,6 +411,7 @@ export default async (fastify: FastifyInstance): Promise<void> => {
         if (taskId) query.taskId = taskId;
         if (startDate) query.startDate = startDate;
         if (endDate) query.endDate = endDate;
+        if (dateFilter) query.dateFilter = dateFilter;
 
         const result = await timeEntriesController.getTimeEntries(request.user.id, query);
 

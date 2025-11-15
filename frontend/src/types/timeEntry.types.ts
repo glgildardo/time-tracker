@@ -30,11 +30,14 @@ export interface UpdateTimeEntryRequest {
   description?: string;
 }
 
+export type DateFilterType = 'day' | 'week' | 'month' | 'all';
+
 export interface TimeEntriesFilters {
   projectId?: string;
   taskId?: string;
   startDate?: string;
   endDate?: string;
+  dateFilter?: DateFilterType;
   limit?: number;
   offset?: number;
   orderDirection?: 'asc' | 'desc';

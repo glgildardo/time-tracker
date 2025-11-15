@@ -9,11 +9,13 @@ const tasksQueryKey = {
 };
 
 // Tasks hooks
-export const useTasks = (projectId?: string) => {
+export const useTasks = (projectId?: string, dateFilter?: 'day' | 'week' | 'month' | 'all') => {
   return useQuery({
-    queryKey: projectId ? tasksQueryKey.byProjectId(projectId) : tasksQueryKey.all,
+    queryKey: projectId 
+      ? [...tasksQueryKey.byProjectId(projectId), dateFilter || 'all']
+      : [...tasksQueryKey.all, dateFilter || 'all'],
     queryFn: async () => {
-      const response = await tasksService.getTasks(projectId);
+      const response = await tasksService.getTasks(projectId, dateFilter);
       return response.tasks;
     },
   });

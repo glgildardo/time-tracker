@@ -3,6 +3,7 @@ import { Project } from '../models/Project';
 import { TimeEntry } from '../models/TimeEntry';
 import { taskTimerService, TaskView } from '../services/taskTimer.service';
 import { ValidationError, NotFoundError, BadRequestError } from '../utils/errorHandler';
+import { getDateRangeFromFilter, type DateFilterType } from '../utils/dateFilter';
 
 interface CreateTaskData {
   name: string;
@@ -23,8 +24,12 @@ interface UpdateTaskData {
 
 class TasksController {
   // Task CRUD operations
-  async getAllTasks(userId: string, projectId?: string) {
-    const filter: { userId: string; projectId?: string } = { userId };
+  async getAllTasks(userId: string, projectId?: string, dateFilter?: DateFilterType) {
+    const filter: { 
+      userId: string; 
+      projectId?: string;
+      createdAt?: { $gte?: Date; $lte?: Date };
+    } = { userId };
 
     if (projectId) {
       // Verify the project belongs to the user
@@ -33,6 +38,18 @@ class TasksController {
         throw new NotFoundError('Project does not exist or you do not have access to it');
       }
       filter.projectId = projectId;
+    }
+
+    // Add date filter if provided
+    if (dateFilter && dateFilter !== 'all') {
+      const dateRange = getDateRangeFromFilter(dateFilter);
+      if (dateRange) {
+        filter.createdAt = {};
+        filter.createdAt.$gte = new Date(dateRange.startDate);
+        const endDate = new Date(dateRange.endDate);
+        endDate.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = endDate;
+      }
     }
 
     const tasks = await Task.find(filter)
