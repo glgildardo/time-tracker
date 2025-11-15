@@ -13,6 +13,7 @@ export const useProjects = () => {
     queryKey: projectsQueryKey.all,
     queryFn: async () => {
       const response = await projectsService.getProjects();
+      console.log('response', response);
       return response.projects;
     },
   });

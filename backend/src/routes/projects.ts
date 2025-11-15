@@ -33,7 +33,34 @@ const createProjectSchema = z.object({
     .optional(),
 });
 
-const updateProjectSchema = createProjectSchema.partial();
+const updateProjectSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Project name is required')
+    .max(100, 'Project name cannot exceed 100 characters')
+    .optional(),
+  description: z
+    .string()
+    .max(500, 'Description cannot exceed 500 characters')
+    .optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i, 'Color must be a valid hex code')
+    .optional(),
+  client: z
+    .string()
+    .max(100, 'Client name cannot exceed 100 characters')
+    .optional(),
+  status: z
+    .enum(['active', 'archived'], {
+      errorMap: () => ({ message: 'Status must be active or archived' }),
+    })
+    .optional(),
+  budget: z
+    .number()
+    .min(0, 'Budget cannot be negative')
+    .optional(),
+});
 
 export default async (fastify: FastifyInstance): Promise<void> => {
   // Get all projects for the authenticated user

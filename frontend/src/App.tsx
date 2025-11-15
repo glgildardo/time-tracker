@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from '@/lib/queryClient';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
@@ -13,6 +14,8 @@ import TasksPage from '@/pages/Tasks';
 import TimeEntriesPage from '@/pages/TimeEntries';
 import DashboardPage from '@/pages/Dashboard';
 import ReportsPage from '@/pages/Reports';
+
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 function App() {
   return (
@@ -99,6 +102,7 @@ function App() {
         </Router>
       </AuthProvider>
       </ThemeProvider>
+      {isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }
