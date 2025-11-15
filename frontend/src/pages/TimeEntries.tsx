@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Play, Square, MoreVertical, Loader2, ArrowUp, ArrowDown } from "lucide-react"
-import { useTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
+import { useInfiniteTimeEntries, useActiveTimer, useStopTimer } from "@/hooks/useTimeEntries"
 import { formatDateTime, formatDurationSeconds, formatDurationHuman } from "@/lib/utils"
 import { StartTimerDialog } from "@/components/time-entries/StartTimerDialog"
 import { EditTimeEntryDialog } from "@/components/time-entries/EditTimeEntryDialog"
@@ -40,9 +40,46 @@ export default function TimeEntriesPage() {
     }))
   }, [dateFilter])
 
-  const { data: timeEntriesData, isLoading: entriesLoading } = useTimeEntries(filters)
+  const {
+    data: infiniteData,
+    isLoading: entriesLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteTimeEntries(filters, 10)
+  
   const { data: activeTimer, isLoading: activeLoading } = useActiveTimer()
   const stopTimer = useStopTimer()
+  
+  // Flatten all pages into a single array
+  const timeEntries = useMemo(() => {
+    return infiniteData?.pages.flatMap((page) => page.timeEntries) ?? []
+  }, [infiniteData])
+  
+  // Intersection observer for infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    
+    const currentRef = loadMoreRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
+    }
+    
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef)
+      }
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   // Client-side elapsed time calculation for active timer
   useEffect(() => {
@@ -78,8 +115,6 @@ export default function TimeEntriesPage() {
     setSelectedEntry(entry)
     setDeleteDialogOpen(true)
   }
-
-  const timeEntries = timeEntriesData?.timeEntries || []
 
   const toggleSortDirection = () => {
     setFilters((prev) => ({
@@ -190,80 +225,91 @@ export default function TimeEntriesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {timeEntries.map((entry) => (
-            <Card key={entry._id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium">
-                      {typeof entry.taskId === "object"
-                        ? entry.taskId.name
-                        : "Task"}
-                    </h3>
-                    {typeof entry.taskId === "object" &&
-                      typeof entry.taskId.projectId === "object" && (
-                        <Badge variant="outline" className="text-xs">
-                          {entry.taskId.projectId.name}
-                        </Badge>
-                      )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>
-                      {formatDateTime(entry.startTime, {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                    <span>•</span>
-                    <span>
-                      {formatDateTime(entry.startTime, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {entry.endTime &&
-                        ` - ${formatDateTime(entry.endTime, {
+        <>
+          <div className="space-y-3">
+            {timeEntries.map((entry) => (
+              <Card key={entry._id}>
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">
+                        {typeof entry.taskId === "object"
+                          ? entry.taskId.name
+                          : "Task"}
+                      </h3>
+                      {typeof entry.taskId === "object" &&
+                        typeof entry.taskId.projectId === "object" && (
+                          <Badge variant="outline" className="text-xs">
+                            {entry.taskId.projectId.name}
+                          </Badge>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>
+                        {formatDateTime(entry.startTime, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      <span>•</span>
+                      <span>
+                        {formatDateTime(entry.startTime, {
                           hour: "2-digit",
                           minute: "2-digit",
-                        })}`}
-                    </span>
+                        })}
+                        {entry.endTime &&
+                          ` - ${formatDateTime(entry.endTime, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}`}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    {entry.duration ? (
-                      <p className="font-mono text-lg font-semibold">
-                        {formatDurationHuman(entry.duration)}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Running...</p>
-                    )}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      {entry.duration ? (
+                        <p className="font-mono text-lg font-semibold">
+                          {formatDurationHuman(entry.duration)}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Running...</p>
+                      )}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(entry)}>
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(entry)}
+                          className="text-destructive"
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(entry)}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(entry)}
-                        className="text-destructive"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          {/* Infinite scroll sentinel and loading indicator */}
+          <div ref={loadMoreRef} className="py-4">
+            {isFetchingNextPage && (
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Dialogs */}

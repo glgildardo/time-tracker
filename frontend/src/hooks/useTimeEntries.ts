@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { timeEntriesService } from '@/services';
 import type { 
@@ -13,6 +13,7 @@ const timeEntriesQueryKey = {
   all: ['timeEntries'],
   lists: () => [...timeEntriesQueryKey.all, 'list'],
   list: (filters: TimeEntriesFilters) => [...timeEntriesQueryKey.lists(), filters],
+  infinite: (filters: TimeEntriesFilters) => [...timeEntriesQueryKey.lists(), 'infinite', filters],
   activeTimer: () => [...timeEntriesQueryKey.all, 'activeTimer'],
 };
 
@@ -29,6 +30,33 @@ export const useTimeEntries = (filters?: TimeEntriesFilters) => {
         offset: response.offset,
       };
     },
+  });
+};
+
+// Infinite scroll hook for time entries
+export const useInfiniteTimeEntries = (filters?: TimeEntriesFilters, pageSize: number = 20) => {
+  const baseFilters = filters ?? {};
+  
+  return useInfiniteQuery({
+    queryKey: timeEntriesQueryKey.infinite(baseFilters),
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await timeEntriesService.getTimeEntries({
+        ...baseFilters,
+        limit: pageSize,
+        offset: pageParam,
+      });
+      return {
+        timeEntries: response.timeEntries,
+        total: response.total,
+        limit: response.limit,
+        offset: response.offset,
+        nextOffset: response.offset + response.limit < response.total 
+          ? response.offset + response.limit 
+          : undefined,
+      };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
   });
 };
 
