@@ -36,6 +36,9 @@ export interface UpdateTaskRequest {
 // Task response types
 export interface TasksResponse {
   tasks: Task[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface TaskResponse {

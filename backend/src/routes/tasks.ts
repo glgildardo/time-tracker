@@ -35,7 +35,9 @@ const updateTaskSchema = createTaskSchema.partial().omit({ projectId: true });
 
 const getTasksQuerySchema = z.object({
   projectId: z.string().optional(),
-  dateFilter: z.enum(['day', 'week', 'month', 'all']).optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
 export default async (fastify: FastifyInstance): Promise<void> => {
@@ -52,7 +54,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
           type: 'object',
           properties: {
             projectId: { type: 'string'},
-            dateFilter: { type: 'string', enum: ['day', 'week', 'month', 'all']},
+            search: { type: 'string'},
+            limit: { type: 'number', minimum: 1, maximum: 100},
+            offset: { type: 'number', minimum: 0},
           },
         },
         response: {
@@ -63,6 +67,9 @@ export default async (fastify: FastifyInstance): Promise<void> => {
                 type: 'array',
                 items: { $ref: 'TaskPopulated#' },
               },
+              total: { type: 'number'},
+              limit: { type: 'number'},
+              offset: { type: 'number'},
             },
           },
           401: { $ref: 'Error#' },
@@ -73,10 +80,16 @@ export default async (fastify: FastifyInstance): Promise<void> => {
     },
     async (request: FastifyRequest, reply) => {
       try {
-        const { projectId, dateFilter } = request.query as z.infer<
+        const { projectId, search, limit, offset } = request.query as z.infer<
           typeof getTasksQuerySchema
         >;
-        const result = await tasksController.getAllTasks(request.user.id, projectId, dateFilter);
+        const result = await tasksController.getAllTasks(
+          request.user.id, 
+          projectId, 
+          search,
+          limit,
+          offset
+        );
         return reply.send(result);
       } catch (error) {
         fastify.log.error(error);

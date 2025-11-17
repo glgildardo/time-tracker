@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge, badgeVariants } from "@/components/ui/badge"
 import type { VariantProps } from "class-variance-authority"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Clock, MoreVertical, Pencil, Trash2, Play, Square, Loader2 } from "lucide-react"
-import { useTasks } from "@/hooks/useTasks"
+import { Input } from "@/components/ui/input"
+import { Plus, Clock, MoreVertical, Pencil, Trash2, Play, Square, Loader2, Search } from "lucide-react"
+import { useInfiniteTasks } from "@/hooks/useTasks"
 import { useProjects } from "@/hooks/useProjects"
 import { useTimeEntries, useActiveTimer, useStopTimer, useStartTimer } from "@/hooks/useTimeEntries"
 import { useUpdateTask } from "@/hooks/useTasks"
@@ -19,8 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { DateFilter } from "@/components/shared/DateFilter"
-import type { Task, DateFilterType } from "@/types"
+import type { Task } from "@/types"
 
 type BadgeVariant = VariantProps<typeof badgeVariants>["variant"]
 
@@ -44,14 +44,68 @@ export default function TasksPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00")
-  const [dateFilter, setDateFilter] = useState<DateFilterType>('day')
+  const [search, setSearch] = useState<string>("")
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("")
 
-  // Fetch tasks with date filter
-  const { data: tasks = [], isLoading: tasksLoading } = useTasks(undefined, dateFilter)
+  // Debounce search input with 1.5 second delay
+  // Reset immediately if search is cleared
+  useEffect(() => {
+    if (search === "") {
+      setDebouncedSearch("")
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Fetch tasks with infinite scroll and debounced search
+  const {
+    data: infiniteData,
+    isLoading: tasksLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteTasks(undefined, debouncedSearch || undefined, 10)
+  
   const { data: projects = [], isLoading: projectsLoading } = useProjects()
   const { data: timeEntriesData } = useTimeEntries()
   const { data: activeTimer, isLoading: activeLoading } = useActiveTimer()
   const timeEntries = timeEntriesData?.timeEntries || []
+
+  // Flatten all pages into a single array
+  const tasks = useMemo(() => {
+    return infiniteData?.pages.flatMap((page) => page.tasks) ?? []
+  }, [infiniteData])
+
+  // Intersection observer for infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    
+    const currentRef = loadMoreRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
+    }
+    
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef)
+      }
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const updateTask = useUpdateTask()
   const startTimer = useStartTimer()
@@ -121,7 +175,19 @@ export default function TasksPage() {
           <p className="text-muted-foreground">Organize and track your work items.</p>
         </div>
         <div className="flex items-center gap-4">
-          <DateFilter value={dateFilter} onChange={setDateFilter} className="w-[140px]" />
+          <div className="relative w-[300px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search tasks by name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {(isFetching || search !== debouncedSearch) && search && (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            )}
+          </div>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             New Task
@@ -174,11 +240,19 @@ export default function TasksPage() {
         </Card>
       ) : null}
 
-      {tasks.length === 0 ? (
+      {/* Loading indicator when fetching new search results */}
+      {(isFetching || search !== debouncedSearch) && search && tasks.length > 0 && (
+        <div className="mb-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Searching...</span>
+        </div>
+      )}
+
+      {tasks.length === 0 && !tasksLoading && !isFetching ? (
         <div className="text-center py-12 text-muted-foreground">
-          {dateFilter === 'all'
-            ? "No tasks yet. Create your first task to get started!"
-            : `No tasks found for the selected period (${dateFilter === 'day' ? 'Today' : dateFilter === 'week' ? 'This Week' : 'This Month'}).`}
+          {debouncedSearch
+            ? `No tasks found matching "${debouncedSearch}".`
+            : "No tasks yet. Create your first task to get started!"}
         </div>
       ) : (
         <div className="space-y-8">
@@ -288,6 +362,15 @@ export default function TasksPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Infinite scroll trigger */}
+      {hasNextPage && (
+        <div ref={loadMoreRef} className="flex justify-center py-4">
+          {isFetchingNextPage && (
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          )}
         </div>
       )}
 

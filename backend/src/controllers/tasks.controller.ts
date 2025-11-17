@@ -3,7 +3,6 @@ import { Project } from '../models/Project';
 import { TimeEntry } from '../models/TimeEntry';
 import { taskTimerService, TaskView } from '../services/taskTimer.service';
 import { ValidationError, NotFoundError, BadRequestError } from '../utils/errorHandler';
-import { getDateRangeFromFilter, type DateFilterType } from '../utils/dateFilter';
 
 interface CreateTaskData {
   name: string;
@@ -24,11 +23,17 @@ interface UpdateTaskData {
 
 class TasksController {
   // Task CRUD operations
-  async getAllTasks(userId: string, projectId?: string, dateFilter?: DateFilterType) {
+  async getAllTasks(
+    userId: string, 
+    projectId?: string, 
+    search?: string,
+    limit: number = 50,
+    offset: number = 0
+  ) {
     const filter: { 
       userId: string; 
       projectId?: string;
-      createdAt?: { $gte?: Date; $lte?: Date };
+      name?: { $regex: string; $options: string };
     } = { userId };
 
     if (projectId) {
@@ -40,24 +45,21 @@ class TasksController {
       filter.projectId = projectId;
     }
 
-    // Add date filter if provided
-    if (dateFilter && dateFilter !== 'all') {
-      const dateRange = getDateRangeFromFilter(dateFilter);
-      if (dateRange) {
-        filter.createdAt = {};
-        filter.createdAt.$gte = new Date(dateRange.startDate);
-        const endDate = new Date(dateRange.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = endDate;
-      }
+    // Add search filter if provided
+    if (search && search.trim()) {
+      filter.name = { $regex: search.trim(), $options: 'i' };
     }
+
+    const total = await Task.countDocuments(filter);
 
     const tasks = await Task.find(filter)
       .populate('projectId', 'name color')
       .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(offset)
       .lean();
 
-    return { tasks };
+    return { tasks, total, limit, offset };
   }
 
   async createTask(userId: string, data: CreateTaskData) {

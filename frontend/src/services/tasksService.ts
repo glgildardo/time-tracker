@@ -11,12 +11,19 @@ import type {
 
 export const tasksService = {
   /**
-   * Get all tasks for the authenticated user, optionally filtered by project and date
+   * Get all tasks for the authenticated user, optionally filtered by project, search, and pagination
    */
-  async getTasks(projectId?: string, dateFilter?: 'day' | 'week' | 'month' | 'all'): Promise<TasksResponse> {
-    const params: Record<string, string> = {};
+  async getTasks(
+    projectId?: string, 
+    search?: string, 
+    limit?: number, 
+    offset?: number
+  ): Promise<TasksResponse> {
+    const params: Record<string, string | number> = {};
     if (projectId) params.projectId = projectId;
-    if (dateFilter) params.dateFilter = dateFilter;
+    if (search) params.search = search;
+    if (limit !== undefined) params.limit = limit;
+    if (offset !== undefined) params.offset = offset;
     const response = await api.get('/tasks', { params });
     return response.data;
   },
