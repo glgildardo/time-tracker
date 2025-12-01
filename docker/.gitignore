@@ -1,0 +1,19 @@
+# Environment files
+.env
+.env.local
+*.env
+
+# Docker override files
+docker-compose.override.yml
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
